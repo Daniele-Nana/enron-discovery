@@ -1,0 +1,10 @@
+version: '3'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: enron
+      POSTGRES_USER: enron
+      POSTGRES_PASSWORD: enron
+    ports:
+      - "5432:5432"
