@@ -1,30 +1,53 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Fil de discussion</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .message { border-left: 3px solid #999; padding: 10px; margin: 5px 0; background: #f9f9f9; }
-        .niveau-1 { margin-left: 0; }
-        .niveau-2 { margin-left: 30px; }
-        .niveau-3 { margin-left: 60px; }
-        .niveau-4 { margin-left: 90px; }
-        .niveau-5 { margin-left: 120px; }
-        /* Ajoute d'autres niveaux si nécessaire */
-    </style>
-</head>
-<body>
-    <h1>Fil de discussion</h1>
+{% extends 'discovery/base.html' %}
 
+{% block title %}Fil complet - Enron Discovery{% endblock %}
+
+{% block extra_head %}
+<style>
+    .thread-message {
+        border-left: 4px solid #0d6efd;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
+    .niveau-1 { margin-left: 0; }
+    .niveau-2 { margin-left: 2rem; }
+    .niveau-3 { margin-left: 4rem; }
+    .niveau-4 { margin-left: 6rem; }
+    .niveau-5 { margin-left: 8rem; }
+    .niveau-6 { margin-left: 10rem; }
+    .niveau-7 { margin-left: 12rem; }
+    .niveau-8 { margin-left: 14rem; }
+    .niveau-9 { margin-left: 16rem; }
+    .niveau-10 { margin-left: 18rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'recherche' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Retour à la recherche
+    </a>
+</div>
+
+<h1 class="display-5 fw-bold mb-4">
+    <i class="fas fa-tree me-3 text-primary"></i>Fil complet
+</h1>
+
+<div class="thread-container">
     {% for msg in messages_fil %}
-        <div class="message niveau-{{ msg.niveau }}">
-            <p><strong>De :</strong> {{ msg.email }}</p>
-            <p><strong>Objet :</strong> {{ msg.objet }}</p>
-            <p><strong>Date :</strong> {{ msg.date|date:"d/m/Y H:i" }}</p>
-            <p>{{ msg.corps|linebreaks }}</p>
+        <div class="thread-message p-3 niveau-{{ msg.niveau }}">
+            <div class="d-flex justify-content-between align-items-start">
+                <h5 class="mb-1">{{ msg.objet }}</h5>
+                <small class="text-muted">{{ msg.date|date:"d/m/Y H:i" }}</small>
+            </div>
+            <p class="mb-2">
+                <i class="fas fa-user me-1 text-primary"></i>
+                <strong>{{ msg.email }}</strong>
+            </p>
+            <p class="mb-0">{{ msg.corps|linebreaks }}</p>
         </div>
     {% endfor %}
-
-    <p><a href="{% url 'recherche' %}">Retour à la recherche</a></p>
-</body>
-</html>
+</div>
+{% endblock %}

@@ -1,27 +1,68 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Influence de {{ employee.email }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .contacts { list-style: none; padding: 0; }
-        .contacts li { padding: 5px 0; border-bottom: 1px solid #eee; }
-    </style>
-</head>
-<body>
-    <h1>Influence de {{ employee.email }}</h1>
+{% extends 'discovery/base.html' %}
 
-    <h2>Top 20 des contacts les plus fréquents</h2>
-    <ul class="contacts">
-        {% for contact in contacts %}
-            <li>
-                {{ contact.destinataires__email }} : {{ contact.count }} échanges
-            </li>
-        {% empty %}
-            <li>Aucun contact trouvé.</li>
-        {% endfor %}
-    </ul>
+{% block title %}Influence - {{ collaborateur.email }} - Enron Discovery{% endblock %}
 
-    <p><a href="{% url 'dashboard' %}">Retour au tableau de bord</a></p>
-</body>
-</html>
+{% block content %}
+<div class="mb-4">
+    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Retour
+    </a>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-user me-2"></i>{{ collaborateur.email }}</h5>
+    </div>
+    <div class="card-body">
+        <p class="lead mb-0">Analyse des échanges</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Destinataires fréquents -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Personnes à qui il écrit le plus</h6>
+            </div>
+            <div class="card-body">
+                {% if top_destinataires %}
+                    <ul class="list-group list-group-flush">
+                    {% for dest in top_destinataires %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ dest.email }}</span>
+                            <span class="badge bg-primary rounded-pill">{{ dest.nb_echanges }}</span>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">Aucune donnée</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Expéditeurs fréquents -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-inbox me-2"></i>Personnes qui lui écrivent le plus</h6>
+            </div>
+            <div class="card-body">
+                {% if top_expediteurs %}
+                    <ul class="list-group list-group-flush">
+                    {% for exp in top_expediteurs %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ exp.email }}</span>
+                            <span class="badge bg-primary rounded-pill">{{ exp.nb_echanges }}</span>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">Aucune donnée</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

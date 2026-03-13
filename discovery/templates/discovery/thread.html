@@ -1,34 +1,57 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Fil de discussion</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .message { border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; background: #f9f9f9; }
-        .reply { border-left: 3px solid #999; padding-left: 15px; margin: 10px 0; }
-    </style>
-</head>
-<body>
-    <h1>Fil de discussion</h1>
+{% extends 'discovery/base.html' %}
 
-    <div class="message">
-        <p><strong>De :</strong> {{ message.expediteur.email }}</p>
-        <p><strong>Objet :</strong> {{ message.objet }}</p>
-        <p><strong>Date :</strong> {{ message.date|date:"d/m/Y H:i" }}</p>
-        <p>{{ message.corps|linebreaks }}</p>
-    </div>
+{% block title %}Fil de discussion - Enron Discovery{% endblock %}
 
-    <h2>Réponses ({{ replies|length }})</h2>
-    {% for reply in replies %}
-        <div class="reply">
-            <p><strong>De :</strong> {{ reply.expediteur.email }}</p>
-            <p><strong>Date :</strong> {{ reply.date|date:"d/m/Y H:i" }}</p>
-            <p>{{ reply.corps|linebreaks }}</p>
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'recherche' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Retour à la recherche
+    </a>
+</div>
+
+<h1 class="display-5 fw-bold mb-4">
+    <i class="fas fa-comments me-3 text-primary"></i>Fil de discussion
+</h1>
+
+<!-- Message principal -->
+<div class="card shadow-sm mb-4 border-primary">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-envelope me-2"></i>Message original</span>
+            <small>{{ message.date|date:"d/m/Y H:i" }}</small>
         </div>
-    {% empty %}
-        <p>Aucune réponse.</p>
-    {% endfor %}
+    </div>
+    <div class="card-body">
+        <h5 class="card-title">{{ message.objet }}</h5>
+        <h6 class="card-subtitle mb-3 text-muted">
+            <i class="fas fa-user me-1"></i>De : 
+            <a href="{% url 'influence' message.expediteur.id %}" class="text-decoration-none">{{ message.expediteur.email }}</a>
+        </h6>
+        <p class="card-text">{{ message.corps|linebreaks }}</p>
+    </div>
+</div>
 
-    <p><a href="{% url 'recherche' %}">Retour à la recherche</a></p>
-</body>
-</html>
+<!-- Réponses -->
+<h3 class="h5 mb-3">Réponses ({{ replies|length }})</h3>
+{% for reply in replies %}
+    <div class="card shadow-sm mb-3 ms-{{ reply.niveau|add:2 }} border-secondary" style="max-width: calc(100% - {{ reply.niveau|add:2 }}px);">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-reply me-2"></i>Réponse</span>
+                <small>{{ reply.date|date:"d/m/Y H:i" }}</small>
+            </div>
+        </div>
+        <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">
+                <i class="fas fa-user me-1"></i>De : 
+                <a href="{% url 'influence' reply.expediteur.id %}" class="text-decoration-none">{{ reply.expediteur.email }}</a>
+            </h6>
+            <p class="card-text">{{ reply.corps|linebreaks }}</p>
+        </div>
+    </div>
+{% empty %}
+    <div class="alert alert-light text-center" role="alert">
+        <i class="fas fa-info-circle me-2"></i>Aucune réponse pour ce message.
+    </div>
+{% endfor %}
+{% endblock %}

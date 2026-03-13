@@ -1,35 +1,20 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Influence de {{ collaborateur.email }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h2 { margin-top: 30px; }
-        ul { list-style-type: none; padding: 0; }
-        li { padding: 5px 0; border-bottom: 1px solid #eee; }
-    </style>
-</head>
-<body>
-    <h1>Influence de {{ collaborateur.email }}</h1>
+{% extends 'discovery/base.html' %}
 
-    <h2>Personnes à qui {{ collaborateur.email }} écrit le plus</h2>
-    <ul>
-    {% for dest in top_destinataires %}
-        <li>{{ dest.email }} : {{ dest.nb_echanges }} échange(s)</li>
-    {% empty %}
-        <li>Aucun destinataire trouvé.</li>
-    {% endfor %}
-    </ul>
+{% block title %}Graphe d'influence - Enron Discovery{% endblock %}
 
-    <h2>Personnes qui écrivent le plus à {{ collaborateur.email }}</h2>
-    <ul>
-    {% for exp in top_expediteurs %}
-        <li>{{ exp.email }} : {{ exp.nb_echanges }} échange(s)</li>
-    {% empty %}
-        <li>Aucun expéditeur trouvé.</li>
-    {% endfor %}
-    </ul>
+{% block content %}
+<div class="mb-4">
+    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Retour
+    </a>
+</div>
 
-    <p><a href="{% url 'dashboard' %}">Retour au tableau de bord</a></p>
-</body>
-</html>
+<h1 class="display-5 fw-bold mb-4">
+    <i class="fas fa-project-diagram me-3 text-primary"></i>Graphe d'influence
+</h1>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    Cette page affiche les connexions entre collaborateurs. (Version simplifiée, à développer)
+</div>
+{% endblock %}
