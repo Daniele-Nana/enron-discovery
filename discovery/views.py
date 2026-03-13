@@ -11,35 +11,41 @@ from django.db.models.functions import TruncMonth
 from datetime import datetime
 from django.db.models.functions import ExtractYear
 from django.db.models import Q
+from django.core.cache import cache
+from django.db.models.functions import ExtractHour
+from django.db.models import Avg
 
 def dashboard(request):
+    # Données mises en cache
+    top_senders = cache.get('top_senders')
+    if not top_senders:
+        top_senders = list(Collaborateur.objects.annotate(nb_envoyes=Count('envoyes')).order_by('-nb_envoyes')[:10])
+        cache.set('top_senders', top_senders, 3600)  # 1 heure
+
+    # Le reste des calculs (non mis en cache car changent peu)
     total_messages = Message.objects.count()
     total_collaborateurs = Collaborateur.objects.count()
-    
-    # Dates extrêmes (ignorer les dates futures pour le dernier)
     premier_email = Message.objects.aggregate(Min('date'))['date__min']
     dernier_email = Message.objects.filter(date__lte=timezone.now()).aggregate(Max('date'))['date__max']
-    
-    # Fils de discussion
     total_threads = Message.objects.filter(in_reply_to__isnull=False).count()
     
-    # Top 10 expéditeurs
-    top_senders = Collaborateur.objects.annotate(
-        nb_envoyes=Count('envoyes')
-    ).order_by('-nb_envoyes')[:10]
-    
     # Statistiques mensuelles
-    mois_stats = Message.objects.annotate(
-        mois=TruncMonth('date')
-    ).values('mois').annotate(
-        count=Count('id')
-    ).order_by('mois')
-    
+    mois_stats = Message.objects.annotate(mois=TruncMonth('date')).values('mois').annotate(count=Count('id')).order_by('mois')
     mois_labels = [m['mois'].strftime('%Y-%m') for m in mois_stats if m['mois']]
     mois_data = [m['count'] for m in mois_stats]
     
-    # Années distinctes
     annees = Message.objects.annotate(annee=ExtractYear('date')).values_list('annee', flat=True).distinct().order_by('-annee')
+
+     # Moyenne d'emails par jour
+    if premier_email and dernier_email:
+        total_days = (dernier_email - premier_email).days
+        avg_per_day = total_messages / total_days if total_days > 0 else 0
+    else:
+        avg_per_day = 0
+
+    # Heures les plus actives
+    top_heures = Message.objects.annotate(heure=ExtractHour('date')).values('heure').annotate(count=Count('id')).order_by('-count')[:5]
+
     
     context = {
         'total_messages': total_messages,
@@ -51,6 +57,8 @@ def dashboard(request):
         'mois_labels': mois_labels,
         'mois_data': mois_data,
         'annees': annees,
+        'avg_per_day': round(avg_per_day, 2),
+        'top_heures': top_heures,
     }
     return render(request, 'discovery/dashboard.html', context)
 
