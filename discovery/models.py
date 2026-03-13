@@ -24,4 +24,5 @@ class Message(models.Model):
             models.Index(fields=['message_id']),
             models.Index(fields=['in_reply_to']),
             GinIndex(fields=['search_vector']),
+            models.Index(fields=['date']),
         ]

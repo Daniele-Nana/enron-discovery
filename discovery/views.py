@@ -124,17 +124,27 @@ def influence(request, employee_id):
     return render(request, 'discovery/influence.html', context)
 
 def thread(request, message_id):
-    message = get_object_or_404(Message, id=message_id)
+    # Récupère le message principal avec l'expéditeur (1 requête)
+    message = get_object_or_404(Message.objects.select_related('expediteur'), id=message_id)
+
     def get_replies(msg, niveau=1):
-        replies = Message.objects.filter(in_reply_to=msg.message_id).order_by('date')
+        # Récupère les réponses directes avec leurs expéditeurs (optimisé)
+        replies = Message.objects.select_related('expediteur').filter(in_reply_to=msg.message_id).order_by('date')
         result = []
         for reply in replies:
             reply.niveau = niveau
             result.append(reply)
-            result.extend(get_replies(reply, niveau+1))
+            # Appel récursif pour les sous-réponses
+            result.extend(get_replies(reply, niveau + 1))
         return result
+
     replies = get_replies(message)
-    return render(request, 'discovery/thread.html', {'message': message, 'replies': replies})
+
+    context = {
+        'message': message,
+        'replies': replies,
+    }
+    return render(request, 'discovery/thread.html', context)
 
 def thread_complet(request, message_id):
     # Récupère le message de départ
