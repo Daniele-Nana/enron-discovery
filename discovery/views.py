@@ -14,6 +14,8 @@ from django.db.models import Q
 from django.core.cache import cache
 from django.db.models.functions import ExtractHour
 from django.db.models import Avg
+from django.db.models import F
+from django.http import JsonResponse
 
 def dashboard(request):
     # Données mises en cache
@@ -227,4 +229,53 @@ def graphe(request, collaborateur_id):
     }
     return render(request, 'discovery/graphe.html', context)
 
+def graphe_data(request):
+    min_echanges = int(request.GET.get('min', 2))
+    max_nodes = int(request.GET.get('max_nodes', 200))
+
+    cache_key = f"graphe_data_{min_echanges}_{max_nodes}"
+    data = cache.get(cache_key)
+    if data:
+        return JsonResponse(data)
+
+    # Récupérer les collaborateurs les plus actifs
+    collaborateurs = Collaborateur.objects.annotate(
+        total=Count('envoyes') + Count('recus')
+    ).filter(total__gt=0).order_by('-total')[:max_nodes]
+
+    collab_ids = set(c.id for c in collaborateurs)
+    nodes = []
+    for c in collaborateurs:
+        nodes.append({
+            'id': c.id,
+            'label': c.email,
+            'title': f"{c.email} (total échanges: {c.total})",
+            'value': c.total,
+        })
+
+    # Compter les échanges entre ces collaborateurs
+    echanges = Message.objects.filter(
+        expediteur__in=collab_ids,
+        destinataires__in=collab_ids
+    ).exclude(
+        expediteur=F('destinataires')
+    ).values('expediteur_id', 'destinataires').annotate(
+        count=Count('id')
+    ).filter(count__gte=min_echanges)
+
+    edges = []
+    for e in echanges:
+        edges.append({
+            'from': e['expediteur_id'],
+            'to': e['destinataires'],  # ← 'destinataires' donne l'ID du destinataire
+            'value': e['count'],
+            'title': f"{e['count']} échanges",
+        })
+
+    data = {'nodes': nodes, 'edges': edges}
+    cache.set(cache_key, data, 3600)
+    return JsonResponse(data)
+
+def graphe_interactif(request):
+    return render(request, 'discovery/graphe_interactif.html')
 

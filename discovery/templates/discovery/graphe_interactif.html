@@ -1,0 +1,128 @@
+{% extends 'discovery/base.html' %}
+{% load static %}
+
+{% block title %}Graphe d'influence interactif - Enron Discovery{% endblock %}
+
+{% block extra_head %}
+    <!-- vis.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+    <style>
+        #network {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+            background-color: white;
+            border-radius: 0.5rem;
+        }
+        .controls {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="my-4">Graphe d'influence interactif</h1>
+    <p>Visualisation des échanges entre les collaborateurs. Ajustez les paramètres ci-dessous.</p>
+
+    <div class="controls row g-3 align-items-end">
+        <div class="col-md-4">
+            <label for="min" class="form-label">Seuil minimum d'échanges</label>
+            <input type="number" class="form-control" id="min" value="2" min="1">
+        </div>
+        <div class="col-md-4">
+            <label for="max_nodes" class="form-label">Nombre maximum de nœuds</label>
+            <input type="number" class="form-control" id="max_nodes" value="100" min="10" max="500">
+        </div>
+        <div class="col-md-2">
+            <button id="reload-graph" class="btn btn-primary w-100">
+                <i class="fas fa-sync-alt me-2"></i>Recharger
+            </button>
+        </div>
+        <div class="col-md-2">
+            <button id="reset-view" class="btn btn-outline-secondary w-100">
+                <i class="fas fa-eye me-2"></i>Réinitialiser vue
+            </button>
+        </div>
+    </div>
+
+    <div id="network"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- vis.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('network');
+            const minInput = document.getElementById('min');
+            const maxInput = document.getElementById('max_nodes');
+            const reloadBtn = document.getElementById('reload-graph');
+            const resetBtn = document.getElementById('reset-view');
+
+            let network = null;
+
+            // Options du graphe avec cercles plus gros
+            const options = {
+                nodes: {
+                    shape: 'dot',
+                    scaling: {
+                        min: 20,          // taille minimale augmentée
+                        max: 50,          // taille maximale augmentée
+                        label: { min: 10, max: 20 }
+                    },
+                    font: { size: 14, face: 'Tahoma' }
+                },
+                edges: {
+                    width: 2,
+                    smooth: { type: 'continuous' },
+                    arrows: { to: { enabled: true, scaleFactor: 0.5 } }
+                },
+                physics: {
+                    stabilization: true,
+                    barnesHut: { gravitationalConstant: -80000, springConstant: 0.001, springLength: 200 }
+                },
+                interaction: { hover: true, tooltipDelay: 200, navigationButtons: true }
+            };
+
+            // Fonction de chargement des données
+            function loadGraph() {
+                const min = minInput.value;
+                const max = maxInput.value;
+                fetch(`/graphe/data/?min=${min}&max_nodes=${max}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const nodes = new vis.DataSet(data.nodes);
+                        const edges = new vis.DataSet(data.edges);
+                        if (network) {
+                            network.setData({ nodes, edges });
+                        } else {
+                            network = new vis.Network(container, { nodes, edges }, options);
+                        }
+                        // Ajuster le zoom une fois que la physique s'est stabilisée
+                        network.once('stabilized', function() {
+                            network.fit();
+                        });
+                    })
+                    .catch(error => console.error('Erreur chargement graphe:', error));
+            }
+
+            // Chargement initial
+            loadGraph();
+
+            // Rechargement sur clic bouton
+            reloadBtn.addEventListener('click', loadGraph);
+
+            // Réinitialiser la vue (zoom, position)
+            resetBtn.addEventListener('click', function() {
+                if (network) {
+                    network.fit();
+                }
+            });
+        });
+    </script>
+{% endblock %}
