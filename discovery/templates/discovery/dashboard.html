@@ -6,16 +6,20 @@
 {% block extra_head %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        body {
+            background-color: #f0f2f5;
+        }
         .stat-card {
             transition: transform 0.2s, box-shadow 0.2s;
             border: none;
             border-radius: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            position: relative;
+            overflow: hidden;
         }
         .stat-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
         }
         .stat-card .card-body {
             padding: 1.5rem;
@@ -31,11 +35,34 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
+        .stat-icon {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 4rem;
+            opacity: 0.2;
+            color: white;
+        }
         .chart-container {
             background: white;
             border-radius: 1rem;
             padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #dee2e6;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+            color: white;
+            border-radius: 1rem 1rem 0 0 !important;
+            padding: 1rem 1.5rem;
+        }
+        .table th {
+            border-top: none;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        .badge-primary {
+            background-color: #0d6efd;
         }
     </style>
 {% endblock %}
@@ -43,54 +70,54 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h1 class="display-5 fw-bold">
+        <h1 class="display-5 fw-bold text-dark">
             <i class="fas fa-chart-line me-3 text-primary"></i>Dashboard
         </h1>
-        <p class="text-muted">Vue d'ensemble des emails Enron</p>
+        <p class="text-secondary">Vue d'ensemble des emails Enron</p>
     </div>
 </div>
 
 <!-- Cartes statistiques -->
 <div class="row g-4 mb-5">
     <div class="col-md-6 col-lg-3">
-        <div class="card stat-card">
+        <div class="card stat-card" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);">
             <div class="card-body">
                 <div class="stat-value">{{ total_messages }}</div>
                 <div class="stat-label">Total emails</div>
-                <i class="fas fa-envelope position-absolute bottom-0 end-0 me-3 mb-3 opacity-50" style="font-size: 3rem;"></i>
+                <i class="fas fa-envelope stat-icon"></i>
             </div>
         </div>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="card stat-card" style="background: linear-gradient(135deg, #5f2c3e 0%, #b24592 100%);">
+        <div class="card stat-card" style="background: linear-gradient(135deg, #198754 0%, #157347 100%);">
             <div class="card-body">
                 <div class="stat-value">{{ total_collaborateurs }}</div>
                 <div class="stat-label">Collaborateurs</div>
-                <i class="fas fa-users position-absolute bottom-0 end-0 me-3 mb-3 opacity-50" style="font-size: 3rem;"></i>
+                <i class="fas fa-users stat-icon"></i>
             </div>
         </div>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="card stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+        <div class="card stat-card" style="background: linear-gradient(135deg, #6c757d 0%, #5c636a 100%);">
             <div class="card-body">
                 <div class="stat-value">{{ total_threads }}</div>
                 <div class="stat-label">Fils de discussion</div>
-                <i class="fas fa-comments position-absolute bottom-0 end-0 me-3 mb-3 opacity-50" style="font-size: 3rem;"></i>
+                <i class="fas fa-comments stat-icon"></i>
             </div>
         </div>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="card stat-card" style="background: linear-gradient(135deg, #f12711 0%, #f5af19 100%);">
+        <div class="card stat-card" style="background: linear-gradient(135deg, #fd7e14 0%, #dc6a0d 100%);">
             <div class="card-body">
-                <div class="stat-value">{{ dernier_email|date:"d/m/Y" }}</div>
+                <div class="stat-value">{{ dernier_email|default:"N/A"|date:"d/m/Y" }}</div>
                 <div class="stat-label">Dernier email</div>
-                <i class="fas fa-calendar-check position-absolute bottom-0 end-0 me-3 mb-3 opacity-50" style="font-size: 3rem;"></i>
+                <i class="fas fa-calendar-check stat-icon"></i>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Graphique avec filtre année -->
+<!-- Graphique -->
 <div class="chart-container mb-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0"><i class="fas fa-chart-bar me-2 text-primary"></i>Évolution mensuelle</h5>
@@ -106,14 +133,14 @@
     <canvas id="mailChart" style="max-height: 400px;"></canvas>
 </div>
 
-<!-- Top 10 expéditeurs -->
+<!-- Top expéditeurs -->
 <div class="card shadow-sm">
-    <div class="card-header bg-white">
-        <h5 class="mb-0"><i class="fas fa-ranking-star me-2 text-warning"></i>Top 10 des expéditeurs</h5>
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-ranking-star me-2"></i>Top 10 des expéditeurs</h5>
     </div>
     <div class="card-body">
         <table class="table table-hover align-middle">
-            <thead class="table-light">
+            <thead>
                 <tr>
                     <th>#</th>
                     <th>Email</th>
@@ -123,8 +150,8 @@
             <tbody>
                 {% for sender in top_senders %}
                 <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td><a href="{% url 'influence' sender.id %}" class="text-decoration-none fw-medium">{{ sender.email }}</a></td>
+                    <td class="fw-bold text-secondary">{{ forloop.counter }}</td>
+                    <td><a href="{% url 'influence' sender.id %}" class="text-decoration-none text-primary fw-medium">{{ sender.email }}</a></td>
                     <td class="text-end"><span class="badge bg-primary rounded-pill">{{ sender.nb_envoyes }}</span></td>
                 </tr>
                 {% empty %}
@@ -135,9 +162,9 @@
     </div>
 </div>
 
-<!-- Lien vers recherche -->
+<!-- Lien recherche -->
 <div class="mt-4 text-center">
-    <a href="{% url 'recherche' %}" class="btn btn-primary btn-lg">
+    <a href="{% url 'recherche' %}" class="btn btn-primary btn-lg px-5">
         <i class="fas fa-search me-2"></i>Accéder à la recherche
     </a>
 </div>
@@ -147,7 +174,6 @@
 <script>
     const moisLabels = {{ mois_labels|safe }};
     const moisData = {{ mois_data|safe }};
-
     const dataByYear = {};
     moisLabels.forEach((label, index) => {
         const year = label.split('-')[0];
@@ -157,7 +183,6 @@
         dataByYear[year].labels.push(label);
         dataByYear[year].data.push(moisData[index]);
     });
-
     const ctx = document.getElementById('mailChart').getContext('2d');
     let chart = new Chart(ctx, {
         type: 'line',
@@ -166,8 +191,8 @@
             datasets: [{
                 label: 'Emails par mois',
                 data: moisData,
-                borderColor: 'rgba(102, 126, 234, 1)',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
                 fill: true,
                 tension: 0.1
             }]
@@ -176,10 +201,9 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
+            scales: { y: { beginAtZero: true, grid: { color: '#e9ecef' } } }
         }
     });
-
     document.getElementById('yearFilter').addEventListener('change', function(e) {
         const selectedYear = e.target.value;
         if (selectedYear === 'all') {

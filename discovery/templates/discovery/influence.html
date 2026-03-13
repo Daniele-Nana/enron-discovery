@@ -2,41 +2,65 @@
 
 {% block title %}Influence - {{ collaborateur.email }} - Enron Discovery{% endblock %}
 
+{% block extra_head %}
+<style>
+    .card-header-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        color: white;
+    }
+    .card-header-success {
+        background: linear-gradient(135deg, #198754 0%, #157347 100%);
+        color: white;
+    }
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+        padding: 1rem 1.25rem;
+    }
+    .list-group-item:first-child {
+        border-top: none;
+    }
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="mb-4">
-    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+    <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill">
         <i class="fas fa-arrow-left me-2"></i>Retour
     </a>
 </div>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-header card-header-primary border-0">
         <h5 class="mb-0"><i class="fas fa-user me-2"></i>{{ collaborateur.email }}</h5>
     </div>
-    <div class="card-body">
-        <p class="lead mb-0">Analyse des échanges</p>
+    <div class="card-body bg-light">
+        <p class="lead mb-0 text-dark">Analyse des échanges</p>
     </div>
 </div>
 
 <div class="row g-4">
     <!-- Destinataires fréquents -->
     <div class="col-md-6">
-        <div class="card h-100 shadow-sm">
-            <div class="card-header bg-success text-white">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header card-header-success border-0">
                 <h6 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Personnes à qui il écrit le plus</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 {% if top_destinataires %}
                     <ul class="list-group list-group-flush">
                     {% for dest in top_destinataires %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>{{ dest.email }}</span>
+                            <span class="text-dark">{{ dest.email }}</span>
                             <span class="badge bg-primary rounded-pill">{{ dest.nb_echanges }}</span>
                         </li>
                     {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="text-muted">Aucune donnée</p>
+                    <p class="text-muted p-3">Aucune donnée</p>
                 {% endif %}
             </div>
         </div>
@@ -44,22 +68,22 @@
 
     <!-- Expéditeurs fréquents -->
     <div class="col-md-6">
-        <div class="card h-100 shadow-sm">
-            <div class="card-header bg-info text-white">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-secondary border-0" style="background: linear-gradient(135deg, #6c757d 0%, #5c636a 100%); color: white;">
                 <h6 class="mb-0"><i class="fas fa-inbox me-2"></i>Personnes qui lui écrivent le plus</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 {% if top_expediteurs %}
                     <ul class="list-group list-group-flush">
                     {% for exp in top_expediteurs %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>{{ exp.email }}</span>
+                            <span class="text-dark">{{ exp.email }}</span>
                             <span class="badge bg-primary rounded-pill">{{ exp.nb_echanges }}</span>
                         </li>
                     {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="text-muted">Aucune donnée</p>
+                    <p class="text-muted p-3">Aucune donnée</p>
                 {% endif %}
             </div>
         </div>

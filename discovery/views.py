@@ -10,18 +10,17 @@ from collections import namedtuple
 from django.db.models.functions import TruncMonth
 from datetime import datetime
 from django.db.models.functions import ExtractYear
+from django.db.models import Q
 
 def dashboard(request):
-    # Statistiques de base
     total_messages = Message.objects.count()
     total_collaborateurs = Collaborateur.objects.count()
     
-    # Premier et dernier email
-    dates = Message.objects.aggregate(premier=Min('date'), dernier=Max('date'))
-    premier_email = dates['premier']
-    dernier_email = dates['dernier']
+    # Dates extrêmes (ignorer les dates futures pour le dernier)
+    premier_email = Message.objects.aggregate(Min('date'))['date__min']
+    dernier_email = Message.objects.filter(date__lte=timezone.now()).aggregate(Max('date'))['date__max']
     
-    # Nombre de fils de discussion (messages avec in_reply_to non vide)
+    # Fils de discussion
     total_threads = Message.objects.filter(in_reply_to__isnull=False).count()
     
     # Top 10 expéditeurs
@@ -29,18 +28,18 @@ def dashboard(request):
         nb_envoyes=Count('envoyes')
     ).order_by('-nb_envoyes')[:10]
     
-    # Statistiques par mois (pour le graphique)
+    # Statistiques mensuelles
     mois_stats = Message.objects.annotate(
         mois=TruncMonth('date')
     ).values('mois').annotate(
         count=Count('id')
     ).order_by('mois')
-
-        # Liste des années distinctes
-    annees = Message.objects.annotate(annee=ExtractYear('date')).values_list('annee', flat=True).distinct().order_by('-annee')
     
     mois_labels = [m['mois'].strftime('%Y-%m') for m in mois_stats if m['mois']]
     mois_data = [m['count'] for m in mois_stats]
+    
+    # Années distinctes
+    annees = Message.objects.annotate(annee=ExtractYear('date')).values_list('annee', flat=True).distinct().order_by('-annee')
     
     context = {
         'total_messages': total_messages,
@@ -64,7 +63,14 @@ def recherche(request):
     messages = Message.objects.all().order_by('-date')
 
     if query:
-        messages = messages.filter(search_vector=SearchQuery(query))
+    # Recherche plein texte sur le champ search_vector (objet + corps)
+        full_text = Q(search_vector=SearchQuery(query))
+    # Recherche sur l'email de l'expéditeur (insensible à la casse)
+        expediteur_match = Q(expediteur__email__icontains=query)
+    # Recherche sur les emails des destinataires (insensible à la casse)
+        destinataire_match = Q(destinataires__email__icontains=query)
+    # Combinaison avec OR
+        messages = messages.filter(full_text | expediteur_match | destinataire_match).distinct()
 
     if date_debut:
         messages = messages.filter(date__gte=date_debut)
@@ -94,35 +100,41 @@ def recherche(request):
     return render(request, 'discovery/recherche.html', context)
 
 def influence(request, employee_id):
-    # Récupère le collaborateur ou renvoie une erreur 404
-    employee = get_object_or_404(Collaborateur, id=employee_id)
+    collaborateur = get_object_or_404(Collaborateur, id=employee_id)
 
-    # Compte les destinataires des messages envoyés par cet employé
-    # On regroupe par email du destinataire et on compte le nombre de messages
-    contacts = Message.objects.filter(expediteur=employee)\
-        .values('destinataires__email')\
-        .annotate(count=Count('id'))\
-        .order_by('-count')[:20]  # Top 20
+    # Destinataires les plus fréquents (personnes à qui il écrit)
+    top_destinataires = Collaborateur.objects.filter(
+        recus__expediteur=collaborateur  # messages reçus par le destinataire ET envoyés par collaborateur
+    ).annotate(
+        nb_echanges=Count('recus')
+    ).order_by('-nb_echanges')[:10]
+
+    # Expéditeurs les plus fréquents (personnes qui lui écrivent)
+    top_expediteurs = Collaborateur.objects.filter(
+        envoyes__destinataires=collaborateur  # messages envoyés par l'expéditeur ET reçus par collaborateur
+    ).annotate(
+        nb_echanges=Count('envoyes')
+    ).order_by('-nb_echanges')[:10]
 
     context = {
-        'employee': employee,
-        'contacts': contacts,
+        'collaborateur': collaborateur,
+        'top_destinataires': top_destinataires,
+        'top_expediteurs': top_expediteurs,
     }
     return render(request, 'discovery/influence.html', context)
 
 def thread(request, message_id):
-    # Récupère le message principal (par son ID) ou renvoie une erreur 404
     message = get_object_or_404(Message, id=message_id)
-
-    # Récupère toutes les réponses : messages dont le champ in_reply_to correspond au message_id du message principal
-    # Attention : in_reply_to stocke le message_id (string) du parent, pas l'ID numérique
-    replies = Message.objects.filter(in_reply_to=message.message_id).order_by('date')
-
-    context = {
-        'message': message,
-        'replies': replies,
-    }
-    return render(request, 'discovery/thread.html', context)
+    def get_replies(msg, niveau=1):
+        replies = Message.objects.filter(in_reply_to=msg.message_id).order_by('date')
+        result = []
+        for reply in replies:
+            reply.niveau = niveau
+            result.append(reply)
+            result.extend(get_replies(reply, niveau+1))
+        return result
+    replies = get_replies(message)
+    return render(request, 'discovery/thread.html', {'message': message, 'replies': replies})
 
 def thread_complet(request, message_id):
     # Récupère le message de départ

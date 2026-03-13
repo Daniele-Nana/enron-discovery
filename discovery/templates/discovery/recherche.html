@@ -2,35 +2,61 @@
 
 {% block title %}Recherche - Enron Discovery{% endblock %}
 
+{% block extra_head %}
+<style>
+    .search-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .result-item {
+        border-left: 4px solid #0d6efd;
+        border-radius: 0.5rem;
+        background: white;
+        transition: transform 0.2s;
+    }
+    .result-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    }
+    .badge-light {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        font-weight: normal;
+        padding: 0.5rem 0.75rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h1 class="display-5 fw-bold">
+        <h1 class="display-5 fw-bold text-dark">
             <i class="fas fa-search me-3 text-primary"></i>Recherche avancée
         </h1>
-        <p class="text-muted">Filtrez les emails par mots-clés, dates ou expéditeur</p>
+        <p class="text-secondary">Filtrez les emails par mots-clés, dates ou expéditeur</p>
     </div>
 </div>
 
-<!-- Formulaire de recherche -->
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
+<!-- Formulaire -->
+<div class="card search-card mb-4">
+    <div class="card-body bg-white p-4">
         <form method="get" class="row g-3">
             <div class="col-md-6">
-                <label for="q" class="form-label fw-medium">Mots-clés</label>
-                <input type="text" class="form-control" id="q" name="q" placeholder="Ex: meeting" value="{{ query }}">
+                <label for="q" class="form-label fw-medium text-dark">Mots-clés</label>
+                <input type="text" class="form-control rounded-pill" id="q" name="q" placeholder="Ex: meeting" value="{{ query }}">
             </div>
             <div class="col-md-3">
-                <label for="date_debut" class="form-label fw-medium">Date début</label>
-                <input type="date" class="form-control" id="date_debut" name="date_debut" value="{{ date_debut }}">
+                <label for="date_debut" class="form-label fw-medium text-dark">Date début</label>
+                <input type="date" class="form-control rounded-pill" id="date_debut" name="date_debut" value="{{ date_debut }}">
             </div>
             <div class="col-md-3">
-                <label for="date_fin" class="form-label fw-medium">Date fin</label>
-                <input type="date" class="form-control" id="date_fin" name="date_fin" value="{{ date_fin }}">
+                <label for="date_fin" class="form-label fw-medium text-dark">Date fin</label>
+                <input type="date" class="form-control rounded-pill" id="date_fin" name="date_fin" value="{{ date_fin }}">
             </div>
             <div class="col-md-4">
-                <label for="expediteur" class="form-label fw-medium">Expéditeur</label>
-                <select class="form-select" id="expediteur" name="expediteur">
+                <label for="expediteur" class="form-label fw-medium text-dark">Expéditeur</label>
+                <select class="form-select rounded-pill" id="expediteur" name="expediteur">
                     <option value="">Tous</option>
                     {% for exp in expediteurs %}
                         <option value="{{ exp.id }}" {% if exp.id == expediteur_id %}selected{% endif %}>{{ exp.email }}</option>
@@ -38,7 +64,7 @@
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">
+                <button type="submit" class="btn btn-primary w-100 rounded-pill">
                     <i class="fas fa-search me-2"></i>Rechercher
                 </button>
             </div>
@@ -49,29 +75,42 @@
 <!-- Résultats -->
 {% if page_obj %}
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">{{ page_obj.paginator.count }} résultat(s) trouvé(s)</h5>
-        <span class="text-muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        <h5 class="mb-0 text-secondary">{{ page_obj.paginator.count }} résultat(s) trouvé(s)</h5>
+        <span class="badge bg-light text-dark rounded-pill px-3 py-2">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
     </div>
 
     <div class="list-group mb-4">
         {% for msg in page_obj %}
-        <div class="list-group-item list-group-item-action p-3">
+        <div class="list-group-item result-item p-3 mb-2">
             <div class="d-flex w-100 justify-content-between">
                 <h6 class="mb-1">
-                    <a href="{% url 'thread' msg.id %}" class="text-decoration-none fw-bold">{{ msg.objet }}</a>
+                    <a href="{% url 'thread' msg.id %}" class="text-decoration-none fw-bold text-primary">{{ msg.objet }}</a>
                 </h6>
                 <small class="text-muted">{{ msg.date|date:"d/m/Y H:i" }}</small>
             </div>
-            <p class="mb-1 text-secondary">{{ msg.corps|truncatewords:30 }}</p>
+            <p class="mb-1 text-secondary">{{ msg.corps|striptags|truncatewords:30 }}</p>
             <div class="d-flex justify-content-between align-items-center mt-2">
                 <div>
-                    <span class="badge bg-light text-dark me-2">
-                        <i class="fas fa-user me-1"></i>
-                        <a href="{% url 'influence' msg.expediteur.id %}" class="text-decoration-none">{{ msg.expediteur.email }}</a>
+                    <span class="badge badge-light me-2">
+                        <i class="fas fa-user me-1 text-primary"></i>
+                        <a href="{% url 'influence' msg.expediteur.id %}" class="text-decoration-none text-dark">{{ msg.expediteur.email }}</a>
                     </span>
-                    <span class="badge bg-light text-dark">
-                        <i class="fas fa-reply-all me-1"></i>
-                        <a href="{% url 'thread_complet' msg.id %}" class="text-decoration-none">Fil complet</a>
+                    <span class="badge bg-light text-dark me-2">
+            <i class="fas fa-users me-1 text-success"></i>
+            {% with dests=msg.destinataires.all %}
+                {% if dests %}
+                    {% for dest in dests|slice:":3" %}
+                        <a href="{% url 'influence' dest.id %}" class="text-decoration-none">{{ dest.email }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                    {% if dests|length > 3 %}...{% endif %}
+                {% else %}
+                    Aucun
+                {% endif %}
+            {% endwith %}
+        </span>
+                    <span class="badge badge-light">
+                        <i class="fas fa-reply-all me-1 text-success"></i>
+                        <a href="{% url 'thread_complet' msg.id %}" class="text-decoration-none text-dark">Fil complet</a>
                     </span>
                 </div>
                 <small class="text-muted">ID: {{ msg.id }}</small>
@@ -85,29 +124,29 @@
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page=1" aria-label="Première">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page=1" aria-label="Première">
                         <span aria-hidden="true">&laquo;&laquo;</span>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.previous_page_number }}" aria-label="Précédente">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.previous_page_number }}" aria-label="Précédente">
                         <span aria-hidden="true">&laquo;</span>
                     </a>
                 </li>
             {% endif %}
 
             <li class="page-item disabled">
-                <span class="page-link">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                <span class="page-link rounded-pill mx-1 bg-light text-dark border-0">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
             </li>
 
             {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.next_page_number }}" aria-label="Suivante">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.next_page_number }}" aria-label="Suivante">
                         <span aria-hidden="true">&raquo;</span>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.paginator.num_pages }}" aria-label="Dernière">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.paginator.num_pages }}" aria-label="Dernière">
                         <span aria-hidden="true">&raquo;&raquo;</span>
                     </a>
                 </li>
@@ -115,8 +154,8 @@
         </ul>
     </nav>
 {% else %}
-    <div class="alert alert-info text-center" role="alert">
-        <i class="fas fa-info-circle me-2"></i>Aucun résultat pour cette recherche.
+    <div class="alert alert-light text-center border-0 shadow-sm" role="alert">
+        <i class="fas fa-info-circle me-2 text-primary"></i>Aucun résultat pour cette recherche.
     </div>
 {% endif %}
 {% endblock %}
