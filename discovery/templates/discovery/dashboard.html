@@ -5,6 +5,7 @@
 
 {% block extra_head %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.0.2/wordcloud2.min.js"></script>
     <style>
         body {
             background-color: #f0f2f5;
@@ -63,6 +64,10 @@
         }
         .badge-primary {
             background-color: #0d6efd;
+        }
+        #wordCloudCanvas {
+            width: 100%;
+            height: 300px;
         }
     </style>
 {% endblock %}
@@ -164,6 +169,16 @@
     </div>
 </div>
 
+<!-- Nuage de mots -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-cloud me-2"></i>Nuage de mots (sujets des emails)</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="wordCloudCanvas" width="600" height="250" style="width:100%; height:250px;"></canvas>
+    </div>
+</div>
+
 <!-- Top expéditeurs -->
 <div class="card shadow-sm">
     <div class="card-header">
@@ -203,6 +218,7 @@
 
 {% block extra_js %}
 <script>
+    // Graphique d'évolution mensuelle
     const moisLabels = {{ mois_labels|safe }};
     const moisData = {{ mois_data|safe }};
     const dataByYear = {};
@@ -246,5 +262,39 @@
         }
         chart.update();
     });
+
+    // Nuage de mots
+    // Nuage de mots
+fetch('/wordcloud-data/')
+    .then(response => response.json())
+    .then(data => {
+        if (typeof WordCloud === 'undefined') {
+            console.error('WordCloud library not loaded');
+            return;
+        }
+        // Limiter à 30 mots
+        data = data.slice(0, 30);
+        console.log('Données reçues (30 premiers):', data);
+        var canvas = document.getElementById('wordCloudCanvas');
+        if (!canvas) {
+            console.error('Canvas not found');
+            return;
+        }
+        var options = {
+            list: data.map(item => [item.word, item.weight]),
+            gridSize: 16,
+            weightFactor: function(w) {
+                // Échelle réduite : racine carrée * 2
+                return Math.sqrt(w) * 2;
+            },
+            fontFamily: 'Arial, sans-serif',
+            color: 'random-dark',
+            rotateRatio: 0.3,
+            shape: 'circle',
+            ellipticity: 0.65
+        };
+        WordCloud(canvas, options);
+    })
+    .catch(error => console.error('Erreur chargement wordcloud:', error));
 </script>
 {% endblock %}
