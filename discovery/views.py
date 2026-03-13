@@ -20,37 +20,67 @@ from collections import Counter
 import re
 
 def dashboard(request):
-    # Données mises en cache
-    top_senders = cache.get('top_senders')
-    if not top_senders:
-        top_senders = list(Collaborateur.objects.annotate(nb_envoyes=Count('envoyes')).order_by('-nb_envoyes')[:10])
-        cache.set('top_senders', top_senders, 3600)  # 1 heure
-
-    # Le reste des calculs (non mis en cache car changent peu)
+    # Statistiques rapides (pas de cache nécessaire)
     total_messages = Message.objects.count()
     total_collaborateurs = Collaborateur.objects.count()
     premier_email = Message.objects.aggregate(Min('date'))['date__min']
     dernier_email = Message.objects.filter(date__lte=timezone.now()).aggregate(Max('date'))['date__max']
     total_threads = Message.objects.filter(in_reply_to__isnull=False).count()
-    
-    # Statistiques mensuelles
-    mois_stats = Message.objects.annotate(mois=TruncMonth('date')).values('mois').annotate(count=Count('id')).order_by('mois')
-    mois_labels = [m['mois'].strftime('%Y-%m') for m in mois_stats if m['mois']]
-    mois_data = [m['count'] for m in mois_stats]
-    
-    annees = Message.objects.annotate(annee=ExtractYear('date')).values_list('annee', flat=True).distinct().order_by('-annee')
 
-     # Moyenne d'emails par jour
-    if premier_email and dernier_email:
-        total_days = (dernier_email - premier_email).days
-        avg_per_day = total_messages / total_days if total_days > 0 else 0
+    # Données mises en cache
+    cache_key = 'dashboard_stats'
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        top_senders = cached_data['top_senders']
+        mois_labels = cached_data['mois_labels']
+        mois_data = cached_data['mois_data']
+        avg_per_day = cached_data['avg_per_day']
+        top_heures = cached_data['top_heures']
+        annees = cached_data['annees']
     else:
-        avg_per_day = 0
+        # Top 10 expéditeurs
+        top_senders = list(Collaborateur.objects.annotate(
+            nb_envoyes=Count('envoyes')
+        ).order_by('-nb_envoyes')[:10])
 
-    # Heures les plus actives
-    top_heures = Message.objects.annotate(heure=ExtractHour('date')).values('heure').annotate(count=Count('id')).order_by('-count')[:5]
+        # Statistiques mensuelles
+        mois_stats = Message.objects.annotate(
+            mois=TruncMonth('date')
+        ).values('mois').annotate(
+            count=Count('id')
+        ).order_by('mois')
+        mois_labels = [m['mois'].strftime('%Y-%m') for m in mois_stats if m['mois']]
+        mois_data = [m['count'] for m in mois_stats]
 
-    
+        # Moyenne par jour
+        if premier_email and dernier_email:
+            total_days = (dernier_email - premier_email).days
+            avg_per_day = total_messages / total_days if total_days > 0 else 0
+        else:
+            avg_per_day = 0
+
+        # Heures les plus actives
+        top_heures = list(Message.objects.annotate(
+            heure=ExtractHour('date')
+        ).values('heure').annotate(
+            count=Count('id')
+        ).order_by('-count')[:5])
+
+        # Années distinctes
+        annees = list(Message.objects.annotate(
+            annee=ExtractYear('date')
+        ).values_list('annee', flat=True).distinct().order_by('-annee'))
+
+        # Mise en cache pour 1 heure
+        cache.set(cache_key, {
+            'top_senders': top_senders,
+            'mois_labels': mois_labels,
+            'mois_data': mois_data,
+            'avg_per_day': avg_per_day,
+            'top_heures': top_heures,
+            'annees': annees,
+        }, 3600)
+
     context = {
         'total_messages': total_messages,
         'total_collaborateurs': total_collaborateurs,
@@ -60,9 +90,9 @@ def dashboard(request):
         'top_senders': top_senders,
         'mois_labels': mois_labels,
         'mois_data': mois_data,
-        'annees': annees,
-        'avg_per_day': round(avg_per_day, 2),
+        'avg_per_day': avg_per_day,
         'top_heures': top_heures,
+        'annees': annees,
     }
     return render(request, 'discovery/dashboard.html', context)
 
