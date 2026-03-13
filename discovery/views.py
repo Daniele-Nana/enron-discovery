@@ -132,17 +132,20 @@ def influence(request, employee_id):
     return render(request, 'discovery/influence.html', context)
 
 def thread(request, message_id):
-    # Récupère le message principal avec l'expéditeur (1 requête)
+    # Récupère le message principal avec l'expéditeur
     message = get_object_or_404(Message.objects.select_related('expediteur'), id=message_id)
 
+    # Messages précédent et suivant (basés sur la date)
+    previous_message = Message.objects.filter(date__lt=message.date).order_by('-date').first()
+    next_message = Message.objects.filter(date__gt=message.date).order_by('date').first()
+
+    # Fonction récursive pour obtenir les réponses avec indentation
     def get_replies(msg, niveau=1):
-        # Récupère les réponses directes avec leurs expéditeurs (optimisé)
         replies = Message.objects.select_related('expediteur').filter(in_reply_to=msg.message_id).order_by('date')
         result = []
         for reply in replies:
             reply.niveau = niveau
             result.append(reply)
-            # Appel récursif pour les sous-réponses
             result.extend(get_replies(reply, niveau + 1))
         return result
 
@@ -151,6 +154,8 @@ def thread(request, message_id):
     context = {
         'message': message,
         'replies': replies,
+        'previous_message': previous_message,
+        'next_message': next_message,
     }
     return render(request, 'discovery/thread.html', context)
 

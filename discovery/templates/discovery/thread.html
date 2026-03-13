@@ -28,10 +28,22 @@
 {% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <a href="{% url 'recherche' %}" class="btn btn-outline-secondary rounded-pill">
+<div class="mb-4 d-flex justify-content-between">
+    <a href="{% url 'recherche' %}" class="btn btn-outline-secondary">
         <i class="fas fa-arrow-left me-2"></i>Retour à la recherche
     </a>
+    <div>
+        {% if previous_message %}
+            <a href="{% url 'thread' previous_message.id %}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-chevron-left"></i> Précédent
+            </a>
+        {% endif %}
+        {% if next_message %}
+            <a href="{% url 'thread' next_message.id %}" class="btn btn-outline-primary">
+                Suivant <i class="fas fa-chevron-right"></i>
+            </a>
+        {% endif %}
+    </div>
 </div>
 
 <h1 class="display-5 fw-bold mb-4 text-dark">
@@ -53,13 +65,13 @@
             <a href="{% url 'influence' message.expediteur.id %}" class="text-decoration-none text-primary fw-medium">{{ message.expediteur.email }}</a>
         </h6>
         <p class="mb-2">
-        <i class="fas fa-users me-1 text-secondary"></i>Destinataires :
-        {% for dest in message.destinataires.all %}
-            <a href="{% url 'influence' dest.id %}" class="text-decoration-none">{{ dest.email }}</a>{% if not forloop.last %}, {% endif %}
-        {% empty %}
-            Aucun destinataire
-        {% endfor %}
-    </p>
+            <i class="fas fa-users me-1 text-secondary"></i>Destinataires :
+            {% for dest in message.destinataires.all %}
+                <a href="{% url 'influence' dest.id %}" class="text-decoration-none">{{ dest.email }}</a>{% if not forloop.last %}, {% endif %}
+            {% empty %}
+                Aucun destinataire
+            {% endfor %}
+        </p>
         <p class="card-text">{{ message.corps|striptags|linebreaks }}</p>
     </div>
 </div>
@@ -78,16 +90,13 @@
                 <a href="{% url 'influence' reply.expediteur.id %}" class="text-decoration-none text-dark">{{ reply.expediteur.email }}</a>
             </p>
             <p class="mb-2 small">
-        <i class="fas fa-users me-1 text-secondary"></i>Destinataires :
-        {% for dest in reply.destinataires.all %}
-            <a href="{% url 'influence' dest.id %}" class="text-decoration-none">{{ dest.email }}</a>{% if not forloop.last %}, {% endif %}
-        {% empty %}
-            Aucun destinataire
-        {% endfor %}
-    </p>
-    <!-- Fin de l'ajout -->
-    <p class="mb-0">{{ reply.corps|escape|linebreaks }}</p>
-</div>
+                <i class="fas fa-users me-1 text-secondary"></i>Destinataires :
+                {% for dest in reply.destinataires.all %}
+                    <a href="{% url 'influence' dest.id %}" class="text-decoration-none">{{ dest.email }}</a>{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                    Aucun destinataire
+                {% endfor %}
+            </p>
             <p class="mb-0">{{ reply.corps|striptags|linebreaks }}</p>
         </div>
     </div>
