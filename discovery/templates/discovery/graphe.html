@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Influence de {{ collaborateur.email }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h2 { margin-top: 30px; }
+        ul { list-style-type: none; padding: 0; }
+        li { padding: 5px 0; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <h1>Influence de {{ collaborateur.email }}</h1>
+
+    <h2>Personnes à qui {{ collaborateur.email }} écrit le plus</h2>
+    <ul>
+    {% for dest in top_destinataires %}
+        <li>{{ dest.email }} : {{ dest.nb_echanges }} échange(s)</li>
+    {% empty %}
+        <li>Aucun destinataire trouvé.</li>
+    {% endfor %}
+    </ul>
+
+    <h2>Personnes qui écrivent le plus à {{ collaborateur.email }}</h2>
+    <ul>
+    {% for exp in top_expediteurs %}
+        <li>{{ exp.email }} : {{ exp.nb_echanges }} échange(s)</li>
+    {% empty %}
+        <li>Aucun expéditeur trouvé.</li>
+    {% endfor %}
+    </ul>
+
+    <p><a href="{% url 'dashboard' %}">Retour au tableau de bord</a></p>
+</body>
+</html>

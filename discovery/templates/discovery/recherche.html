@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recherche d'emails</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .resultats { list-style: none; padding: 0; }
+        .resultats li { border-bottom: 1px solid #ccc; padding: 10px 0; }
+        .pagination { margin-top: 20px; }
+        .pagination a { margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Recherche avancée</h1>
+
+    <!-- Formulaire de recherche -->
+    <form method="get">
+        <input type="text" name="q" placeholder="Mots-clés" value="{{ query }}">
+        <br>
+        Date début : <input type="date" name="date_debut" value="{{ date_debut }}">
+        <br>
+        Date fin : <input type="date" name="date_fin" value="{{ date_fin }}">
+        <br>
+        Expéditeur :
+        <select name="expediteur">
+            <option value="">Tous</option>
+            {% for exp in expediteurs %}
+                <option value="{{ exp.id }}" {% if exp.id == expediteur_id %}selected{% endif %}>
+                    {{ exp.email }}
+                </option>
+            {% endfor %}
+        </select>
+        <br>
+        <button type="submit">Rechercher</button>
+    </form>
+
+    <!-- Affichage des résultats -->
+    {% if page_obj %}
+        <h2>Résultats ({{ page_obj.paginator.count }} trouvés)</h2>
+        <ul class="resultats">
+        {% for msg in page_obj %}
+            <li>
+                <strong>
+                    <a href="{% url 'thread' msg.id %}">{{ msg.objet }}</a>
+                    <a href="{% url 'thread_complet' msg.id %}">Voir le fil complet</a>
+                </strong><br>
+                De : 
+                <a href="{% url 'influence' msg.expediteur.id %}">
+                    {{ msg.expediteur.email }}
+                </a><br>
+                Date : {{ msg.date|date:"d/m/Y H:i" }}<br>
+                {{ msg.corps|truncatewords:30 }}
+            </li>
+        {% endfor %}
+        </ul>
+
+        <!-- Liens de pagination -->
+        <div class="pagination">
+            <span class="step-links">
+                {% if page_obj.has_previous %}
+                    <a href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page=1">
+                        &laquo; première
+                    </a>
+                    <a href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.previous_page_number }}">
+                        précédente
+                    </a>
+                {% endif %}
+
+                <span class="current">
+                    Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}.
+                </span>
+
+                {% if page_obj.has_next %}
+                    <a href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.next_page_number }}">
+                        suivante
+                    </a>
+                    <a href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.paginator.num_pages }}">
+                        dernière &raquo;
+                    </a>
+                {% endif %}
+            </span>
+        </div>
+    {% else %}
+        <p>Aucun résultat.</p>
+    {% endif %}
+
+    <p><a href="{% url 'dashboard' %}">Retour au tableau de bord</a></p>
+</body>
+</html>

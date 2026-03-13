@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Influence de {{ employee.email }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .contacts { list-style: none; padding: 0; }
+        .contacts li { padding: 5px 0; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <h1>Influence de {{ employee.email }}</h1>
+
+    <h2>Top 20 des contacts les plus fréquents</h2>
+    <ul class="contacts">
+        {% for contact in contacts %}
+            <li>
+                {{ contact.destinataires__email }} : {{ contact.count }} échanges
+            </li>
+        {% empty %}
+            <li>Aucun contact trouvé.</li>
+        {% endfor %}
+    </ul>
+
+    <p><a href="{% url 'dashboard' %}">Retour au tableau de bord</a></p>
+</body>
+</html>

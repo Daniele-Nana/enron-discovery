@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fil de discussion</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .message { border-left: 3px solid #999; padding: 10px; margin: 5px 0; background: #f9f9f9; }
+        .niveau-1 { margin-left: 0; }
+        .niveau-2 { margin-left: 30px; }
+        .niveau-3 { margin-left: 60px; }
+        .niveau-4 { margin-left: 90px; }
+        .niveau-5 { margin-left: 120px; }
+        /* Ajoute d'autres niveaux si nécessaire */
+    </style>
+</head>
+<body>
+    <h1>Fil de discussion</h1>
+
+    {% for msg in messages_fil %}
+        <div class="message niveau-{{ msg.niveau }}">
+            <p><strong>De :</strong> {{ msg.email }}</p>
+            <p><strong>Objet :</strong> {{ msg.objet }}</p>
+            <p><strong>Date :</strong> {{ msg.date|date:"d/m/Y H:i" }}</p>
+            <p>{{ msg.corps|linebreaks }}</p>
+        </div>
+    {% endfor %}
+
+    <p><a href="{% url 'recherche' %}">Retour à la recherche</a></p>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fil de discussion</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .message { border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; background: #f9f9f9; }
+        .reply { border-left: 3px solid #999; padding-left: 15px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Fil de discussion</h1>
+
+    <div class="message">
+        <p><strong>De :</strong> {{ message.expediteur.email }}</p>
+        <p><strong>Objet :</strong> {{ message.objet }}</p>
+        <p><strong>Date :</strong> {{ message.date|date:"d/m/Y H:i" }}</p>
+        <p>{{ message.corps|linebreaks }}</p>
+    </div>
+
+    <h2>Réponses ({{ replies|length }})</h2>
+    {% for reply in replies %}
+        <div class="reply">
+            <p><strong>De :</strong> {{ reply.expediteur.email }}</p>
+            <p><strong>Date :</strong> {{ reply.date|date:"d/m/Y H:i" }}</p>
+            <p>{{ reply.corps|linebreaks }}</p>
+        </div>
+    {% empty %}
+        <p>Aucune réponse.</p>
+    {% endfor %}
+
+    <p><a href="{% url 'recherche' %}">Retour à la recherche</a></p>
+</body>
+</html>
