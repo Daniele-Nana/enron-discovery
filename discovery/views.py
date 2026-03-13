@@ -101,35 +101,30 @@ def recherche(request):
     date_debut = request.GET.get('date_debut', '')
     date_fin = request.GET.get('date_fin', '')
     expediteur_id = request.GET.get('expediteur', '')
+    destinataire_id = request.GET.get('destinataire', '')  # changement
 
     messages = Message.objects.all().order_by('-date')
 
     if query:
-    # Recherche plein texte sur le champ search_vector (objet + corps)
-        full_text = Q(search_vector=SearchQuery(query))
-    # Recherche sur l'email de l'expéditeur (insensible à la casse)
-        expediteur_match = Q(expediteur__email__icontains=query)
-    # Recherche sur les emails des destinataires (insensible à la casse)
-        destinataire_match = Q(destinataires__email__icontains=query)
-    # Combinaison avec OR
-        messages = messages.filter(full_text | expediteur_match | destinataire_match).distinct()
+        messages = messages.filter(search_vector=SearchQuery(query, search_type='websearch'))
 
     if date_debut:
         messages = messages.filter(date__gte=date_debut)
     if date_fin:
         messages = messages.filter(date__lte=date_fin)
-
-    # Filtre sécurisé : on vérifie que expediteur_id est un nombre
     if expediteur_id and expediteur_id.isdigit():
         messages = messages.filter(expediteur_id=int(expediteur_id))
+    if destinataire_id and destinataire_id.isdigit():
+        messages = messages.filter(destinataires__id=int(destinataire_id))
 
-    # Pagination
     paginator = Paginator(messages, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Liste des expéditeurs pour le menu déroulant
+    # Liste des expéditeurs (ceux qui ont envoyé au moins un message)
     expediteurs = Collaborateur.objects.filter(envoyes__isnull=False).distinct().order_by('email')
+    # Liste des destinataires (ceux qui ont reçu au moins un message)
+    destinataires = Collaborateur.objects.filter(recus__isnull=False).distinct().order_by('email')
 
     context = {
         'page_obj': page_obj,
@@ -137,7 +132,9 @@ def recherche(request):
         'date_debut': date_debut,
         'date_fin': date_fin,
         'expediteur_id': int(expediteur_id) if expediteur_id and expediteur_id.isdigit() else None,
+        'destinataire_id': int(destinataire_id) if destinataire_id and destinataire_id.isdigit() else None,
         'expediteurs': expediteurs,
+        'destinataires': destinataires,
     }
     return render(request, 'discovery/recherche.html', context)
 

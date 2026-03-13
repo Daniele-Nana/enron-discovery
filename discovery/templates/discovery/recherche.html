@@ -34,17 +34,20 @@
         <h1 class="display-5 fw-bold text-dark">
             <i class="fas fa-search me-3 text-primary"></i>Recherche avancée
         </h1>
-        <p class="text-secondary">Filtrez les emails par mots-clés, dates ou expéditeur</p>
+        <p class="text-secondary">Filtrez les emails par mots-clés, dates, expéditeur ou destinataire</p>
     </div>
 </div>
 
-<!-- Formulaire -->
+<!-- Formulaire de recherche -->
 <div class="card search-card mb-4">
     <div class="card-body bg-white p-4">
         <form method="get" class="row g-3">
             <div class="col-md-6">
                 <label for="q" class="form-label fw-medium text-dark">Mots-clés</label>
                 <input type="text" class="form-control rounded-pill" id="q" name="q" placeholder="Ex: meeting" value="{{ query }}">
+                <small class="text-muted">
+                    Astuces : utilisez "guillemets" pour une phrase exacte, -mot pour exclure, OR pour l'un ou l'autre.
+                </small>
             </div>
             <div class="col-md-3">
                 <label for="date_debut" class="form-label fw-medium text-dark">Date début</label>
@@ -60,6 +63,15 @@
                     <option value="">Tous</option>
                     {% for exp in expediteurs %}
                         <option value="{{ exp.id }}" {% if exp.id == expediteur_id %}selected{% endif %}>{{ exp.email }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="destinataire" class="form-label fw-medium text-dark">Destinataire</label>
+                <select class="form-select rounded-pill" id="destinataire" name="destinataire">
+                    <option value="">Tous</option>
+                    {% for dest in destinataires %}
+                        <option value="{{ dest.id }}" {% if dest.id == destinataire_id %}selected{% endif %}>{{ dest.email }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -88,26 +100,13 @@
                 </h6>
                 <small class="text-muted">{{ msg.date|date:"d/m/Y H:i" }}</small>
             </div>
-            <p class="mb-1 text-secondary">{{ msg.corps|striptags|truncatewords:30 }}</p>
+            <p class="mb-1 text-secondary">{{ msg.corps|truncatewords:30 }}</p>
             <div class="d-flex justify-content-between align-items-center mt-2">
                 <div>
                     <span class="badge badge-light me-2">
                         <i class="fas fa-user me-1 text-primary"></i>
                         <a href="{% url 'influence' msg.expediteur.id %}" class="text-decoration-none text-dark">{{ msg.expediteur.email }}</a>
                     </span>
-                    <span class="badge bg-light text-dark me-2">
-            <i class="fas fa-users me-1 text-success"></i>
-            {% with dests=msg.destinataires.all %}
-                {% if dests %}
-                    {% for dest in dests|slice:":3" %}
-                        <a href="{% url 'influence' dest.id %}" class="text-decoration-none">{{ dest.email }}</a>{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
-                    {% if dests|length > 3 %}...{% endif %}
-                {% else %}
-                    Aucun
-                {% endif %}
-            {% endwith %}
-        </span>
                     <span class="badge badge-light">
                         <i class="fas fa-reply-all me-1 text-success"></i>
                         <a href="{% url 'thread_complet' msg.id %}" class="text-decoration-none text-dark">Fil complet</a>
@@ -124,12 +123,12 @@
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page=1" aria-label="Première">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&page=1" aria-label="Première">
                         <span aria-hidden="true">&laquo;&laquo;</span>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.previous_page_number }}" aria-label="Précédente">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&page={{ page_obj.previous_page_number }}" aria-label="Précédente">
                         <span aria-hidden="true">&laquo;</span>
                     </a>
                 </li>
@@ -141,12 +140,12 @@
 
             {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.next_page_number }}" aria-label="Suivante">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&page={{ page_obj.next_page_number }}" aria-label="Suivante">
                         <span aria-hidden="true">&raquo;</span>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&page={{ page_obj.paginator.num_pages }}" aria-label="Dernière">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&page={{ page_obj.paginator.num_pages }}" aria-label="Dernière">
                         <span aria-hidden="true">&raquo;&raquo;</span>
                     </a>
                 </li>
@@ -154,7 +153,7 @@
         </ul>
     </nav>
 {% else %}
-    <div class="alert alert-light text-center border-0 shadow-sm" role="alert">
+    <div class="alert alert-info text-center border-0 shadow-sm" role="alert">
         <i class="fas fa-info-circle me-2 text-primary"></i>Aucun résultat pour cette recherche.
     </div>
 {% endif %}
