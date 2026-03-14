@@ -123,10 +123,6 @@
                         <i class="fas fa-user me-1 text-primary"></i>
                         <a href="{% url 'influence' msg.expediteur.id %}" class="text-decoration-none text-dark">{{ msg.expediteur.email }}</a>
                     </span>
-                    <span class="badge badge-light">
-                        <i class="fas fa-reply-all me-1 text-success"></i>
-                        <a href="{% url 'thread_complet' msg.id %}" class="text-decoration-none text-dark">Fil complet</a>
-                    </span>
                 </div>
                 <small class="text-muted">ID: {{ msg.id }}</small>
             </div>
