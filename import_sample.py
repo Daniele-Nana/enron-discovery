@@ -4,6 +4,7 @@ from email.utils import parsedate_to_datetime
 import django
 from pathlib import Path
 import dateutil.parser
+from email.mime.base import MIMEBase
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'enron_project.settings')
 django.setup()
@@ -57,14 +58,26 @@ def parse_eml(path):
         if date.year < 1990 or date.year > 2005:
             date = None
 
+    # Extraction du corps et des pièces jointes
     body = ""
+    attachments = []
     if msg.is_multipart():
         for part in msg.walk():
-            if part.get_content_type() == 'text/plain':
+            content_type = part.get_content_type()
+            if content_type == 'text/plain' and not part.get_filename():
                 payload = part.get_payload(decode=True)
                 if payload:
-                    body = payload.decode(errors='ignore')
-                break
+                    body += payload.decode(errors='ignore')
+            elif part.get_filename():  # pièce jointe
+                filename = part.get_filename()
+                payload = part.get_payload(decode=True)
+                if payload:
+                    attachments.append({
+                        'filename': filename,
+                        'content_type': content_type,
+                        'data': payload,
+                        'size': len(payload)
+                    })
     else:
         payload = msg.get_payload(decode=True)
         if payload:
@@ -73,12 +86,9 @@ def parse_eml(path):
     if '-- ' in body:
         body = body.split('-- ')[0]
 
-    return message_id, in_reply_to, from_, to, cc, bcc, subject, date, body
+    return message_id, in_reply_to, from_, to, cc, bcc, subject, date, body, attachments
 
 def get_or_create_folder(rel_path):
-    """Crée récursivement les dossiers à partir du chemin relatif.
-       rel_path est une chaîne comme 'allen-p/inbox' (sans le nom de fichier).
-    """
     parts = rel_path.split(os.sep)
     current_path = ''
     parent = None
@@ -92,16 +102,16 @@ def get_or_create_folder(rel_path):
             defaults={'name': part, 'parent': parent}
         )
         parent = folder
-    return parent  # le dernier dossier (celui qui contient le fichier)
+    return parent
 
 def main():
-    base = Path('maildir/allen-p')  # à adapter si besoin
+    base = Path('maildir/allen-p')
     count = 0
     errors = 0
     for path in base.rglob('*'):
         if path.is_file():
             try:
-                message_id, in_reply_to, from_, to, cc, bcc, subject, date, body = parse_eml(path)
+                (message_id, in_reply_to, from_, to, cc, bcc, subject, date, body, attachments) = parse_eml(path)
                 if not from_ or not date:
                     errors += 1
                     continue
@@ -133,11 +143,10 @@ def main():
                 add_recipients(cc, 'cc')
                 add_recipients(bcc, 'bcc')
 
-                # Gestion du dossier : on obtient le chemin relatif par rapport à la base
-                # path.parent donne le dossier, puis on prend le relatif par rapport à base
-                folder_rel = path.parent.relative_to(base)
-                if str(folder_rel) != '.':
-                    folder = get_or_create_folder(str(folder_rel))
+                # Gestion des dossiers
+                rel_folder = path.relative_to(base).parent
+                if str(rel_folder) != '.':
+                    folder = get_or_create_folder(str(rel_folder))
                     MessageFolder.objects.get_or_create(message=msg, folder=folder)
 
                 count += 1
