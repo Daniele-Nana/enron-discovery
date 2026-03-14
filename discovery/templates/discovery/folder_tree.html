@@ -1,0 +1,13 @@
+{% for node in nodes %}
+    <li>
+        <i class="fas fa-folder me-2 text-warning"></i>
+        <a href="#" class="text-decoration-none">{{ node.folder.name }}</a>
+        {% if node.children %}
+            <ul class="list-unstyled ms-4">
+                {% include "discovery/folder_tree.html" with nodes=node.children %}
+            </ul>
+        {% endif %}
+    </li>
+{% empty %}
+    <li class="text-muted">Aucun dossier</li>
+{% endfor %}

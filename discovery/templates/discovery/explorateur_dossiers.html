@@ -1,0 +1,40 @@
+{% extends 'discovery/base.html' %}
+
+{% block title %}Dossiers de {{ collaborateur.email }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Retour
+    </a>
+</div>
+
+<h1 class="display-5 fw-bold mb-4">
+    <i class="fas fa-folder-open me-3 text-primary"></i>Dossiers de {{ collaborateur.email }}
+</h1>
+
+<div class="card">
+    <div class="card-body">
+        {% if folders %}
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Dossier</th>
+                    <th class="text-end">Nombre d'emails</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for folder in folders %}
+                <tr>
+                    <td>{{ folder.path }}</td>
+                    <td class="text-end">{{ folder.nb_emails }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">Aucun dossier trouvé pour ce collaborateur.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

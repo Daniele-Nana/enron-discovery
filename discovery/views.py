@@ -1,5 +1,5 @@
 from django.contrib.postgres.search import SearchVector, SearchQuery
-from .models import Message, Collaborateur
+from .models import Message, Collaborateur, Folder
 from django.shortcuts import render
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
@@ -32,6 +32,7 @@ def dashboard(request):
     cached_data = cache.get(cache_key)
     if cached_data:
         top_senders = cached_data['top_senders']
+        top_recipients = cached_data['top_recipients']   # ← ajout
         mois_labels = cached_data['mois_labels']
         mois_data = cached_data['mois_data']
         avg_per_day = cached_data['avg_per_day']
@@ -42,6 +43,11 @@ def dashboard(request):
         top_senders = list(Collaborateur.objects.annotate(
             nb_envoyes=Count('envoyes')
         ).order_by('-nb_envoyes')[:10])
+
+        # Top 10 destinataires (nouveau)
+        top_recipients = list(Collaborateur.objects.annotate(
+            nb_recus=Count('recus')
+        ).order_by('-nb_recus')[:10])
 
         # Statistiques mensuelles
         mois_stats = Message.objects.annotate(
@@ -74,6 +80,7 @@ def dashboard(request):
         # Mise en cache pour 1 heure
         cache.set(cache_key, {
             'top_senders': top_senders,
+            'top_recipients': top_recipients,   # ← ajout
             'mois_labels': mois_labels,
             'mois_data': mois_data,
             'avg_per_day': avg_per_day,
@@ -88,6 +95,7 @@ def dashboard(request):
         'dernier_email': dernier_email,
         'total_threads': total_threads,
         'top_senders': top_senders,
+        'top_recipients': top_recipients,
         'mois_labels': mois_labels,
         'mois_data': mois_data,
         'avg_per_day': avg_per_day,
@@ -335,3 +343,18 @@ def wordcloud_data(request):
     data = [{'word': w, 'weight': c} for w, c in top_words]
     
     return JsonResponse(data, safe=False)
+
+def explorateur_dossiers(request, collaborateur_id):
+    collaborateur = get_object_or_404(Collaborateur, id=collaborateur_id)
+    # Récupère tous les dossiers où ce collaborateur a envoyé des messages
+    folders = Folder.objects.filter(
+        messages__message__expediteur=collaborateur
+    ).annotate(
+        nb_emails=Count('messages__message', filter=Q(messages__message__expediteur=collaborateur))
+    ).order_by('path')
+
+    context = {
+        'collaborateur': collaborateur,
+        'folders': folders,
+    }
+    return render(request, 'discovery/explorateur_dossiers.html', context) 

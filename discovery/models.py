@@ -24,5 +24,19 @@ class Message(models.Model):
             models.Index(fields=['message_id']),
             models.Index(fields=['in_reply_to']),
             GinIndex(fields=['search_vector']),
-            models.Index(fields=['date']),
         ]
+
+class Folder(models.Model):
+    name = models.CharField(max_length=255)
+    path = models.TextField(unique=True)          # chemin complet relatif
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+
+    def __str__(self):
+        return self.path
+
+class MessageFolder(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='folders')
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='messages')
+
+    class Meta:
+        unique_together = ('message', 'folder')

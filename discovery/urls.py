@@ -11,4 +11,5 @@ urlpatterns = [
     path('graphe/', views.graphe_interactif, name='graphe_interactif'),
     path('graphe/data/', views.graphe_data, name='graphe_data'),
     path('wordcloud-data/', views.wordcloud_data, name='wordcloud_data'),
+    path('dossiers/<int:collaborateur_id>/', views.explorateur_dossiers, name='explorateur_dossiers'),
 ]

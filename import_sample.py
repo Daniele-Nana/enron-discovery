@@ -8,7 +8,7 @@ import dateutil.parser
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'enron_project.settings')
 django.setup()
 
-from discovery.models import Collaborateur, Message
+from discovery.models import Collaborateur, Message, Folder, MessageFolder
 
 def parse_eml(path):
     with open(path, 'rb') as f:
@@ -75,8 +75,27 @@ def parse_eml(path):
 
     return message_id, in_reply_to, from_, to, cc, bcc, subject, date, body
 
+def get_or_create_folder(rel_path):
+    """Crée récursivement les dossiers à partir du chemin relatif.
+       rel_path est une chaîne comme 'allen-p/inbox' (sans le nom de fichier).
+    """
+    parts = rel_path.split(os.sep)
+    current_path = ''
+    parent = None
+    for part in parts:
+        if current_path:
+            current_path = current_path + '/' + part
+        else:
+            current_path = part
+        folder, _ = Folder.objects.get_or_create(
+            path=current_path,
+            defaults={'name': part, 'parent': parent}
+        )
+        parent = folder
+    return parent  # le dernier dossier (celui qui contient le fichier)
+
 def main():
-    base = Path('maildir/allen-p')  # ← ici on limite à un sous-dossier
+    base = Path('maildir/allen-p')  # à adapter si besoin
     count = 0
     errors = 0
     for path in base.rglob('*'):
@@ -113,6 +132,13 @@ def main():
                 add_recipients(to, 'to')
                 add_recipients(cc, 'cc')
                 add_recipients(bcc, 'bcc')
+
+                # Gestion du dossier : on obtient le chemin relatif par rapport à la base
+                # path.parent donne le dossier, puis on prend le relatif par rapport à base
+                folder_rel = path.parent.relative_to(base)
+                if str(folder_rel) != '.':
+                    folder = get_or_create_folder(str(folder_rel))
+                    MessageFolder.objects.get_or_create(message=msg, folder=folder)
 
                 count += 1
                 if count % 100 == 0:
