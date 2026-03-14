@@ -101,6 +101,22 @@
                 <small class="text-muted">{{ msg.date|date:"d/m/Y H:i" }}</small>
             </div>
             <p class="mb-1 text-secondary">{{ msg.corps|truncatewords:30 }}</p>
+            
+            <!-- Destinataires -->
+            <div class="mt-1 small">
+                <i class="fas fa-users me-1 text-secondary"></i>Destinataires :
+                {% with dests=msg.destinataires.all %}
+                    {% if dests %}
+                        {% for dest in dests|slice:":3" %}
+                            <a href="{% url 'influence' dest.id %}" class="text-decoration-none">{{ dest.email }}</a>{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                        {% if dests|length > 3 %}...{% endif %}
+                    {% else %}
+                        <span class="text-muted">Aucun</span>
+                    {% endif %}
+                {% endwith %}
+            </div>
+
             <div class="d-flex justify-content-between align-items-center mt-2">
                 <div>
                     <span class="badge badge-light me-2">

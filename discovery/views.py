@@ -111,7 +111,7 @@ def recherche(request):
     expediteur_id = request.GET.get('expediteur', '')
     destinataire_id = request.GET.get('destinataire', '')  # changement
 
-    messages = Message.objects.all().order_by('-date')
+    messages = Message.objects.prefetch_related('destinataires').all().order_by('-date')
 
     if query:
         messages = messages.filter(search_vector=SearchQuery(query, search_type='websearch'))
