@@ -12,4 +12,6 @@ urlpatterns = [
     path('graphe/data/', views.graphe_data, name='graphe_data'),
     path('wordcloud-data/', views.wordcloud_data, name='wordcloud_data'),
     path('dossiers/<int:collaborateur_id>/', views.explorateur_dossiers, name='explorateur_dossiers'),
+    path('autocomplete-expediteurs/', views.autocomplete_expediteurs, name='autocomplete_expediteurs'),
+    path('autocomplete-destinataires/', views.autocomplete_destinataires, name='autocomplete_destinataires'),
 ]

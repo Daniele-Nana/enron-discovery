@@ -18,6 +18,7 @@ from django.db.models import F
 from django.http import JsonResponse
 from collections import Counter
 import re
+from datetime import datetime, timedelta
 
 def dashboard(request):
     # Statistiques rapides (pas de cache nécessaire)
@@ -109,7 +110,7 @@ def recherche(request):
     date_debut = request.GET.get('date_debut', '')
     date_fin = request.GET.get('date_fin', '')
     expediteur_id = request.GET.get('expediteur', '')
-    destinataire_id = request.GET.get('destinataire', '')  # changement
+    destinataire_id = request.GET.get('destinataire', '')
 
     messages = Message.objects.prefetch_related('destinataires').all().order_by('-date')
 
@@ -117,9 +118,19 @@ def recherche(request):
         messages = messages.filter(search_vector=SearchQuery(query, search_type='websearch'))
 
     if date_debut:
-        messages = messages.filter(date__gte=date_debut)
+        try:
+            start_date = datetime.strptime(date_debut, '%Y-%m-%d')
+            messages = messages.filter(date__gte=start_date)
+        except ValueError:
+            pass
+
     if date_fin:
-        messages = messages.filter(date__lte=date_fin)
+        try:
+            end_date = datetime.strptime(date_fin, '%Y-%m-%d') + timedelta(days=1)
+            messages = messages.filter(date__lt=end_date)
+        except ValueError:
+            pass
+
     if expediteur_id and expediteur_id.isdigit():
         messages = messages.filter(expediteur_id=int(expediteur_id))
     if destinataire_id and destinataire_id.isdigit():
@@ -129,9 +140,23 @@ def recherche(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Liste des expéditeurs (ceux qui ont envoyé au moins un message)
+    # Récupération des objets sélectionnés pour la pré‑sélection dans le template
+    selected_expediteur = None
+    if expediteur_id and expediteur_id.isdigit():
+        try:
+            selected_expediteur = Collaborateur.objects.get(pk=expediteur_id)
+        except Collaborateur.DoesNotExist:
+            pass
+
+    selected_destinataire = None
+    if destinataire_id and destinataire_id.isdigit():
+        try:
+            selected_destinataire = Collaborateur.objects.get(pk=destinataire_id)
+        except Collaborateur.DoesNotExist:
+            pass
+
+    # Listes complètes (optionnelles, peuvent être supprimées si vous utilisez AJAX)
     expediteurs = Collaborateur.objects.filter(envoyes__isnull=False).distinct().order_by('email')
-    # Liste des destinataires (ceux qui ont reçu au moins un message)
     destinataires = Collaborateur.objects.filter(recus__isnull=False).distinct().order_by('email')
 
     context = {
@@ -143,6 +168,8 @@ def recherche(request):
         'destinataire_id': int(destinataire_id) if destinataire_id and destinataire_id.isdigit() else None,
         'expediteurs': expediteurs,
         'destinataires': destinataires,
+        'selected_expediteur': selected_expediteur,
+        'selected_destinataire': selected_destinataire,
     }
     return render(request, 'discovery/recherche.html', context)
 
@@ -322,7 +349,7 @@ def graphe_interactif(request):
     return render(request, 'discovery/graphe_interactif.html')
 
 STOP_WORDS = set("""
-a about above after again against all am an and any are aren't as at be because been before being below between both but by can't cannot could couldn't did didn't do does doesn't doing don't down during each few for from further had hadn't has hasn't have haven't having he he'd he'll he's here here's hers herself him himself his how how's i i'd i'll i'm i've if in into is isn't it it's its itself let's me more most mustn't my myself no nor not of off on once only or other ought our ours ourselves out over own same shan't she she'd she'll she's should shouldn't so some such than that that's the their theirs them themselves then there there's these they they'd they'll they're they've this those through to too under until up very was wasn't we we'd we'll we're we've were weren't what what's when when's where where's which while who who's whom why why's with won't would wouldn't you you'd you'll you're you've your yours yourself yourselves
+a about above after again against all am an and any are aren't as at be because been before being below between both but by can't cannot could couldn't did didn't do does doesn't doing don't down during each few for from further fwd had hadn't has hasn't have haven't having he he'd he'll he's here here's hers herself him himself his how how's i i'd i'll i'm i've if in into is isn't it it's its itself let's me more most mustn't my myself no nor not of off on once only or other ought our ours ourselves out over own same shan't she she'd she'll she's should shouldn't so some such than that that's the their theirs them themselves then there there's these they they'd they'll they're they've this those through to too under until up very was wasn't we we'd we'll we're we've were weren't what what's when when's where where's which while who who's whom why why's with won't would wouldn't you you'd you'll you're you've your yours yourself yourselves
 """.split())
 
 def wordcloud_data(request):
@@ -362,4 +389,21 @@ def explorateur_dossiers(request, collaborateur_id):
         'collaborateur': collaborateur,
         'folders': folders,
     }
-    return render(request, 'discovery/explorateur_dossiers.html', context) 
+    return render(request, 'discovery/explorateur_dossiers.html', context)
+
+def autocomplete_expediteurs(request):
+    term = request.GET.get('q', '')
+    expediteurs = Collaborateur.objects.filter(envoyes__isnull=False).distinct()
+    if term:
+        expediteurs = expediteurs.filter(email__icontains=term)
+    results = [{'id': e.id, 'text': e.email} for e in expediteurs[:20]]
+    return JsonResponse({'results': results})
+
+def autocomplete_destinataires(request):
+    term = request.GET.get('q', '')
+    destinataires = Collaborateur.objects.filter(recus__isnull=False).distinct()
+    if term:
+        destinataires = destinataires.filter(email__icontains=term)
+    results = [{'id': d.id, 'text': d.email} for d in destinataires[:20]]
+    return JsonResponse({'results': results})
+ 

@@ -25,7 +25,22 @@
         font-weight: normal;
         padding: 0.5rem 0.75rem;
     }
+    /* Style Select2 pour correspondre à Bootstrap */
+    .select2-container--default .select2-selection--single {
+        height: calc(3.5rem + 2px);
+        padding: 0.5rem 1rem;
+        border: 1px solid #ced4da;
+        border-radius: 50rem;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 2.5rem;
+        padding-left: 0;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 3.5rem;
+    }
 </style>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
 
 {% block content %}
@@ -59,21 +74,11 @@
             </div>
             <div class="col-md-4">
                 <label for="expediteur" class="form-label fw-medium text-dark">Expéditeur</label>
-                <select class="form-select rounded-pill" id="expediteur" name="expediteur">
-                    <option value="">Tous</option>
-                    {% for exp in expediteurs %}
-                        <option value="{{ exp.id }}" {% if exp.id == expediteur_id %}selected{% endif %}>{{ exp.email }}</option>
-                    {% endfor %}
-                </select>
+                <select class="form-select rounded-pill" id="expediteur" name="expediteur" style="width: 100%;"></select>
             </div>
             <div class="col-md-4">
                 <label for="destinataire" class="form-label fw-medium text-dark">Destinataire</label>
-                <select class="form-select rounded-pill" id="destinataire" name="destinataire">
-                    <option value="">Tous</option>
-                    {% for dest in destinataires %}
-                        <option value="{{ dest.id }}" {% if dest.id == destinataire_id %}selected{% endif %}>{{ dest.email }}</option>
-                    {% endfor %}
-                </select>
+                <select class="form-select rounded-pill" id="destinataire" name="destinataire" style="width: 100%;"></select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100 rounded-pill">
@@ -169,4 +174,76 @@
         <i class="fas fa-info-circle me-2 text-primary"></i>Aucun résultat pour cette recherche.
     </div>
 {% endif %}
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialisation de Select2 pour l'expéditeur
+    $('#expediteur').select2({
+        ajax: {
+            url: '{% url "autocomplete_expediteurs" %}',
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return { q: params.term };
+            },
+            processResults: function(data) {
+                return { results: data.results };
+            },
+            cache: true
+        },
+        placeholder: 'Tous',
+        allowClear: true,
+        width: '100%',
+        minimumInputLength: 1,
+        templateResult: function(data) {
+            if (data.loading) return data.text;
+            return $('<span>' + data.text + '</span>');
+        },
+        templateSelection: function(data) {
+            return data.text;
+        }
+    });
+
+    // Initialisation de Select2 pour le destinataire
+    $('#destinataire').select2({
+        ajax: {
+            url: '{% url "autocomplete_destinataires" %}',
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return { q: params.term };
+            },
+            processResults: function(data) {
+                return { results: data.results };
+            },
+            cache: true
+        },
+        placeholder: 'Tous',
+        allowClear: true,
+        width: '100%',
+        minimumInputLength: 1,
+        templateResult: function(data) {
+            if (data.loading) return data.text;
+            return $('<span>' + data.text + '</span>');
+        },
+        templateSelection: function(data) {
+            return data.text;
+        }
+    });
+
+    // Pré-sélection si un expéditeur est déjà choisi
+    {% if selected_expediteur %}
+    var expediteurOption = new Option('{{ selected_expediteur.email }}', '{{ selected_expediteur.id }}', true, true);
+    $('#expediteur').append(expediteurOption).trigger('change');
+    {% endif %}
+
+    // Pré-sélection si un destinataire est déjà choisi
+    {% if selected_destinataire %}
+    var destinataireOption = new Option('{{ selected_destinataire.email }}', '{{ selected_destinataire.id }}', true, true);
+    $('#destinataire').append(destinataireOption).trigger('change');
+    {% endif %}
+});
+</script>
 {% endblock %}
