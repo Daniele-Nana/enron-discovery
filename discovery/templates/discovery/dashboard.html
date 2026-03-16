@@ -161,6 +161,74 @@
     </div>
 </div>
 
+<!-- Inclusion de la bibliothèque WordCloud (si ce n'est pas déjà fait) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.0.2/wordcloud2.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    fetch("{% url 'wordcloud_data' %}")
+      .then(response => response.json())
+      .then(data => {
+        console.log('Données du nuage :', data); // Pour déboguer
+        if (data && data.length > 0) {
+          // Transformer en tableau de paires [mot, poids]
+          const words = data.map(item => [item.word, item.weight]);
+          WordCloud(document.getElementById('wordCloudCanvas'), {
+            list: words,
+            gridSize: 12,
+            weightFactor: 0.8,
+            fontFamily: 'Arial',
+            color: 'random-dark',
+            rotateRatio: 0.5,
+            shape: 'circle',
+            ellipticity: 0.65
+          });
+        } else {
+          console.warn('Aucune donnée pour le nuage de mots');
+        }
+      })
+      .catch(err => console.error('Erreur lors du chargement du nuage :', err));
+  });
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.0.2/wordcloud2.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  fetch("{% url 'wordcloud_data' %}")
+    .then(response => response.json())
+    .then(data => {
+      console.log('Données reçues:', data); // pour vérifier
+      if (data && data.length > 0) {
+        // Transformer en tableau de paires [mot, poids]
+        const words = data.map(item => [item.word, item.weight]);
+        
+        // Trouver le poids maximum
+        const maxWeight = Math.max(...words.map(item => item[1]));
+        // Taille maximale souhaitée pour les mots (en pixels)
+        const targetMaxSize = 80;
+        const weightFactor = targetMaxSize / maxWeight;
+
+        // Options du nuage
+        const options = {
+          list: words,
+          gridSize: 16,
+          weightFactor: weightFactor,
+          fontFamily: 'Arial',
+          color: 'random-dark',
+          rotateRatio: 0.5,
+          shape: 'circle',
+          ellipticity: 0.65,
+        };
+
+        WordCloud(document.getElementById('wordCloudCanvas'), options);
+      } else {
+        console.warn('Aucune donnée pour le nuage de mots');
+      }
+    })
+    .catch(err => console.error('Erreur lors du chargement du nuage :', err));
+});
+</script>
+
 <!-- Top expéditeurs -->
 <div class="card shadow-sm">
     <div class="card-header">
