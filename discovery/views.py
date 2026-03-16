@@ -61,7 +61,7 @@ def dashboard(request):
         # Moyenne par jour
         if premier_email and dernier_email:
             total_days = (dernier_email - premier_email).days
-            avg_per_day = total_messages / total_days if total_days > 0 else 0
+            avg_per_day = round(total_messages / total_days) if total_days > 0 else 0
         else:
             avg_per_day = 0
 
@@ -149,6 +149,9 @@ def recherche(request):
 def influence(request, employee_id):
     collaborateur = get_object_or_404(Collaborateur, id=employee_id)
 
+    sent_count = Message.objects.filter(expediteur=collaborateur).count()
+    received_count = Message.objects.filter(destinataires=collaborateur).count()
+
     # Destinataires les plus fréquents (personnes à qui il écrit)
     top_destinataires = Collaborateur.objects.filter(
         recus__expediteur=collaborateur  # messages reçus par le destinataire ET envoyés par collaborateur
@@ -165,6 +168,8 @@ def influence(request, employee_id):
 
     context = {
         'collaborateur': collaborateur,
+        'sent_count': sent_count,
+        'received_count': received_count,
         'top_destinataires': top_destinataires,
         'top_expediteurs': top_expediteurs,
     }
