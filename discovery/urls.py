@@ -14,4 +14,5 @@ urlpatterns = [
     path('dossiers/<int:collaborateur_id>/', views.explorateur_dossiers, name='explorateur_dossiers'),
     path('autocomplete-expediteurs/', views.autocomplete_expediteurs, name='autocomplete_expediteurs'),
     path('autocomplete-destinataires/', views.autocomplete_destinataires, name='autocomplete_destinataires'),
+    path('collaborateur/<int:collaborateur_id>/tous-emails/', views.tous_emails_collaborateur, name='tous_emails'),
 ]

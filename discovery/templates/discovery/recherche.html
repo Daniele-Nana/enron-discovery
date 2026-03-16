@@ -80,10 +80,19 @@
                 <label for="destinataire" class="form-label fw-medium text-dark">Destinataire</label>
                 <select class="form-select rounded-pill" id="destinataire" name="destinataire" style="width: 100%;"></select>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100 rounded-pill">
-                    <i class="fas fa-search me-2"></i>Rechercher
-                </button>
+            <div class="col-md-2">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill">
+                            <i class="fas fa-search me-2"></i>Rechercher
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <a href="{% url 'recherche' %}" class="btn btn-outline-secondary w-100 rounded-pill">
+                            <i class="fas fa-eraser me-2"></i>Effacer
+                        </a>
+                    </div>
+                </div>
             </div>
         </form>
     </div>

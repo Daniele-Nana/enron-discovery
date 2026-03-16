@@ -110,6 +110,12 @@
     </div>
 </div>
 
+<div class="mt-4 text-center">
+    <a href="{% url 'tous_emails' collaborateur.id %}" class="btn btn-primary btn-lg">
+        <i class="fas fa-envelope me-2"></i>Voir tous ses emails
+    </a>
+</div>
+
 <!-- Bouton vers l'explorateur de dossiers -->
 <div class="mt-4 text-center">
     <a href="{% url 'explorateur_dossiers' collaborateur.id %}" class="btn btn-info btn-lg">

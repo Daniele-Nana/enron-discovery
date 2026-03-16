@@ -1,0 +1,72 @@
+{% extends 'discovery/base.html' %}
+
+{% block title %}Tous les emails de {{ collaborateur.email }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'influence' collaborateur.id %}" class="btn btn-outline-secondary rounded-pill">
+        <i class="fas fa-arrow-left me-2"></i>Retour à l'influence
+    </a>
+</div>
+
+<h2 class="mb-4">Tous les emails de {{ collaborateur.email }}</h2>
+
+<div class="mb-3">
+    <span class="badge bg-primary rounded-pill px-3 py-2">{{ page_obj.paginator.count }} message(s)</span>
+</div>
+
+<div class="list-group">
+    {% for msg in page_obj %}
+    <div class="list-group-item list-group-item-action">
+        <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">
+                <a href="{% url 'thread' msg.id %}" class="text-decoration-none">{{ msg.objet }}</a>
+            </h5>
+            <small>{{ msg.date|date:"d/m/Y H:i" }}</small>
+        </div>
+        <p class="mb-1">{{ msg.corps|truncatewords:30 }}</p>
+        <small>
+            {% if msg.expediteur == collaborateur %}
+                <span class="badge bg-success">Envoyé</span>
+            {% else %}
+                <span class="badge bg-info">Reçu</span>
+            {% endif %}
+            de {{ msg.expediteur.email }} à
+            {% for dest in msg.destinataires.all|slice:":3" %}
+                {{ dest.email }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+            {% if msg.destinataires.all|length > 3 %}...{% endif %}
+        </small>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">Aucun email trouvé.</div>
+    {% endfor %}
+</div>
+
+<!-- Pagination (identique à celle de la recherche) -->
+<nav aria-label="Pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link rounded-pill mx-1" href="?page=1">&laquo;&laquo;</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link rounded-pill mx-1" href="?page={{ page_obj.previous_page_number }}">&laquo;</a>
+            </li>
+        {% endif %}
+
+        <li class="page-item disabled">
+            <span class="page-link rounded-pill mx-1 bg-light text-dark border-0">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link rounded-pill mx-1" href="?page={{ page_obj.next_page_number }}">&raquo;</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link rounded-pill mx-1" href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %}

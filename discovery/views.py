@@ -407,3 +407,21 @@ def autocomplete_destinataires(request):
     results = [{'id': d.id, 'text': d.email} for d in destinataires[:20]]
     return JsonResponse({'results': results})
  
+def tous_emails_collaborateur(request, collaborateur_id):
+    collaborateur = get_object_or_404(Collaborateur, pk=collaborateur_id)
+
+    # Tous les messages où le collaborateur est expéditeur OU destinataire
+    messages = Message.objects.filter(
+        Q(expediteur=collaborateur) | Q(destinataires=collaborateur)
+    ).distinct().order_by('-date')  # distinct évite les doublons si un message est dans les deux
+
+    # Pagination (par exemple 20 messages par page)
+    paginator = Paginator(messages, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'collaborateur': collaborateur,
+        'page_obj': page_obj,
+    }
+    return render(request, 'discovery/tous_emails.html', context)
