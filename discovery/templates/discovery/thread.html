@@ -33,6 +33,10 @@
         <i class="fas fa-arrow-left me-2"></i>Retour à la recherche
     </a>
     <div>
+        <!-- Nouveau bouton Fil complet -->
+        <a href="{% url 'thread_complet' message.id %}" class="btn btn-outline-success me-2">
+            <i class="fas fa-reply-all me-2"></i>Fil complet
+        </a>
         {% if previous_message %}
             <a href="{% url 'thread' previous_message.id %}" class="btn btn-outline-primary me-2">
                 <i class="fas fa-chevron-left"></i> Précédent
@@ -76,4 +80,22 @@
     </div>
 </div>
 
+<!-- Réponses (si existantes) -->
+{% if replies %}
+    <h5 class="mb-3 text-secondary"><i class="fas fa-reply me-2"></i>Réponses ({{ replies|length }})</h5>
+    {% for reply in replies %}
+    <div class="card thread-reply mb-3 niveau-{{ reply.niveau }}">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <h6 class="card-subtitle text-primary">
+                    <i class="fas fa-user me-1"></i>
+                    <a href="{% url 'influence' reply.expediteur.id %}" class="text-decoration-none">{{ reply.expediteur.email }}</a>
+                </h6>
+                <small class="text-muted">{{ reply.date|date:"d/m/Y H:i" }}</small>
+            </div>
+            <p class="card-text mt-2">{{ reply.corps|striptags|linebreaks }}</p>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
 {% endblock %}

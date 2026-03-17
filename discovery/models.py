@@ -18,6 +18,7 @@ class Message(models.Model):
     destinataires = models.ManyToManyField(Collaborateur, related_name='recus')
     in_reply_to = models.CharField(max_length=255, blank=True, null=True)
     search_vector = SearchVectorField(null=True)
+    date = models.DateTimeField(db_index=True)  # Ajoutez db_index=True
 
     class Meta:
         indexes = [

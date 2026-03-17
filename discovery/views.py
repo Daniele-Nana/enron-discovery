@@ -112,7 +112,7 @@ def recherche(request):
     expediteur_id = request.GET.get('expediteur', '')
     destinataire_id = request.GET.get('destinataire', '')
 
-    messages = Message.objects.prefetch_related('destinataires').all().order_by('-date')
+    messages = Message.objects.select_related('expediteur').prefetch_related('destinataires').all().order_by('-date')
 
     if query:
         messages = messages.filter(search_vector=SearchQuery(query, search_type='websearch'))
@@ -353,26 +353,22 @@ a about above after again against all am an and any are aren't as at be because 
 """.split())
 
 def wordcloud_data(request):
-    # Récupérer tous les objets non vides
-    subjects = Message.objects.exclude(objet__isnull=True).exclude(objet='').values_list('objet', flat=True)
+    # Clé de cache unique
+    cache_key = 'wordcloud_data'
+    data = cache.get(cache_key)
     
-    # Concaténer
-    text = ' '.join(subjects)
-    
-    # Extraire les mots de 3 lettres ou plus
-    words = re.findall(r'\b[a-z]{3,}\b', text.lower())
-    
-    # Filtrer les stop words
-    words = [w for w in words if w not in STOP_WORDS]
-    
-    # Compter
-    counter = Counter(words)
-    
-    # Garder les 40 mots les plus fréquents (vous pouvez ajuster)
-    top_words = counter.most_common(40)
-    
-    # Formater
-    data = [{'word': w, 'weight': c} for w, c in top_words]
+    if data is None:
+        # Calcul long (effectué uniquement si le cache est vide)
+        subjects = Message.objects.exclude(objet__isnull=True).exclude(objet='').values_list('objet', flat=True)
+        text = ' '.join(subjects)
+        words = re.findall(r'\b[a-z]{3,}\b', text.lower())
+        words = [w for w in words if w not in STOP_WORDS]
+        counter = Counter(words)
+        top_words = counter.most_common(40)
+        data = [{'word': w, 'weight': c} for w, c in top_words]
+        
+        # Stocker pour 1 heure (3600 secondes)
+        cache.set(cache_key, data, 3600)
     
     return JsonResponse(data, safe=False)
 
