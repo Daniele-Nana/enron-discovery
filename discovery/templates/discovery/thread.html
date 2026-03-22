@@ -29,21 +29,28 @@
 
 {% block content %}
 <div class="mb-4 d-flex justify-content-between">
-    <a href="{% url 'recherche' %}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left me-2"></i>Retour à la recherche
-    </a>
     <div>
-        <!-- Nouveau bouton Fil complet -->
+        {% if folder_id %}
+            <a href="{% url 'contenu_dossier' message.expediteur.id folder_id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour au dossier
+            </a>
+        {% else %}
+            <a href="{% url 'recherche' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour à la recherche
+            </a>
+        {% endif %}
+    </div>
+    <div>
         <a href="{% url 'thread_complet' message.id %}" class="btn btn-outline-success me-2">
             <i class="fas fa-reply-all me-2"></i>Fil complet
         </a>
         {% if previous_message %}
-            <a href="{% url 'thread' previous_message.id %}" class="btn btn-outline-primary me-2">
+            <a href="{% url 'thread' previous_message.id %}{% if folder_id %}?folder_id={{ folder_id }}{% endif %}" class="btn btn-outline-primary me-2">
                 <i class="fas fa-chevron-left"></i> Précédent
             </a>
         {% endif %}
         {% if next_message %}
-            <a href="{% url 'thread' next_message.id %}" class="btn btn-outline-primary">
+            <a href="{% url 'thread' next_message.id %}{% if folder_id %}?folder_id={{ folder_id }}{% endif %}" class="btn btn-outline-primary">
                 Suivant <i class="fas fa-chevron-right"></i>
             </a>
         {% endif %}
@@ -65,13 +72,17 @@
     <div class="card-body">
         <h5 class="card-title text-dark">{{ message.objet }}</h5>
         <h6 class="card-subtitle mb-3 text-secondary">
-            <i class="fas fa-user me-1"></i>De : 
-            <a href="{% url 'influence' message.expediteur.id %}" class="text-decoration-none text-primary fw-medium">{{ message.expediteur.email }}</a>
+            <i class="fas fa-user me-1"></i>De :
+            <a href="{% url 'influence' message.expediteur.id %}?thread_id={{ message.id }}" class="text-decoration-none text-primary fw-medium">
+                {{ message.expediteur.email }}
+            </a>
         </h6>
         <p class="mb-2">
             <i class="fas fa-users me-1 text-secondary"></i>Destinataires :
             {% for dest in message.destinataires.all %}
-                <a href="{% url 'influence' dest.id %}" class="text-decoration-none">{{ dest.email }}</a>{% if not forloop.last %}, {% endif %}
+                <a href="{% url 'influence' dest.id %}?thread_id={{ message.id }}" class="text-decoration-none">
+                    {{ dest.email }}
+                </a>{% if not forloop.last %}, {% endif %}
             {% empty %}
                 Aucun destinataire
             {% endfor %}
@@ -80,7 +91,7 @@
     </div>
 </div>
 
-<!-- Réponses (si existantes) -->
+<!-- Réponses -->
 {% if replies %}
     <h5 class="mb-3 text-secondary"><i class="fas fa-reply me-2"></i>Réponses ({{ replies|length }})</h5>
     {% for reply in replies %}
@@ -89,7 +100,9 @@
             <div class="d-flex justify-content-between">
                 <h6 class="card-subtitle text-primary">
                     <i class="fas fa-user me-1"></i>
-                    <a href="{% url 'influence' reply.expediteur.id %}" class="text-decoration-none">{{ reply.expediteur.email }}</a>
+                    <a href="{% url 'influence' reply.expediteur.id %}?thread_id={{ reply.id }}" class="text-decoration-none">
+                        {{ reply.expediteur.email }}
+                    </a>
                 </h6>
                 <small class="text-muted">{{ reply.date|date:"d/m/Y H:i" }}</small>
             </div>

@@ -41,4 +41,3 @@ class MessageFolder(models.Model):
 
     class Meta:
         unique_together = ('message', 'folder')
-

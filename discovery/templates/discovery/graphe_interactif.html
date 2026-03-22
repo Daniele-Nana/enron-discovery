@@ -13,12 +13,33 @@
             border: 1px solid #ccc;
             background-color: white;
             border-radius: 0.5rem;
+            position: relative;
+        }
+        #loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 0.5rem;
+            font-size: 1.2rem;
+            color: #0d6efd;
         }
         .controls {
             background: #f8f9fa;
             padding: 1rem;
             border-radius: 0.5rem;
             margin-bottom: 1rem;
+        }
+        .error-message {
+            color: #dc3545;
+            padding: 2rem;
+            text-align: center;
         }
     </style>
 {% endblock %}
@@ -49,7 +70,11 @@
         </div>
     </div>
 
-    <div id="network"></div>
+    <div id="network">
+        <div id="loading-overlay" style="display: none;">
+            <div><i class="fas fa-spinner fa-pulse me-2"></i> Chargement du graphe...</div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -63,16 +88,16 @@
             const maxInput = document.getElementById('max_nodes');
             const reloadBtn = document.getElementById('reload-graph');
             const resetBtn = document.getElementById('reset-view');
+            const loadingOverlay = document.getElementById('loading-overlay');
 
             let network = null;
 
-            // Options du graphe avec cercles plus gros
             const options = {
                 nodes: {
                     shape: 'dot',
                     scaling: {
-                        min: 20,          // taille minimale augmentée
-                        max: 50,          // taille maximale augmentée
+                        min: 20,
+                        max: 50,
                         label: { min: 10, max: 20 }
                     },
                     font: { size: 14, face: 'Tahoma' }
@@ -89,39 +114,54 @@
                 interaction: { hover: true, tooltipDelay: 200, navigationButtons: true }
             };
 
-            // Fonction de chargement des données
             function loadGraph() {
                 const min = minInput.value;
                 const max = maxInput.value;
+
+                loadingOverlay.style.display = 'flex';
+                // On retire d'éventuels messages d'erreur précédents
+                const oldMsg = container.querySelector('.error-message');
+                if (oldMsg) oldMsg.remove();
+
                 fetch(`/graphe/data/?min=${min}&max_nodes=${max}`)
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
+                        loadingOverlay.style.display = 'none';
+
+                        if (!data.nodes || data.nodes.length === 0) {
+                            container.innerHTML = '<div class="error-message">Aucune donnée à afficher. Essayez d\'augmenter le seuil ou de réduire le nombre de nœuds.</div>';
+                            return;
+                        }
+
                         const nodes = new vis.DataSet(data.nodes);
                         const edges = new vis.DataSet(data.edges);
+
                         if (network) {
                             network.setData({ nodes, edges });
                         } else {
                             network = new vis.Network(container, { nodes, edges }, options);
                         }
-                        // Ajuster le zoom une fois que la physique s'est stabilisée
+
                         network.once('stabilized', function() {
                             network.fit();
                         });
                     })
-                    .catch(error => console.error('Erreur chargement graphe:', error));
+                    .catch(error => {
+                        loadingOverlay.style.display = 'none';
+                        console.error('Erreur chargement graphe:', error);
+                        container.innerHTML = '<div class="error-message">Erreur lors du chargement du graphe. Vérifiez que le serveur est accessible.</div>';
+                    });
             }
 
-            // Chargement initial
             loadGraph();
-
-            // Rechargement sur clic bouton
             reloadBtn.addEventListener('click', loadGraph);
-
-            // Réinitialiser la vue (zoom, position)
             resetBtn.addEventListener('click', function() {
-                if (network) {
-                    network.fit();
-                }
+                if (network) network.fit();
             });
         });
     </script>

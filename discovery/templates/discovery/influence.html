@@ -28,9 +28,15 @@
 
 {% block content %}
 <div class="mb-4">
-    <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill">
-        <i class="fas fa-arrow-left me-2"></i>Retour
-    </a>
+    {% if thread_id %}
+        <a href="{% url 'thread' thread_id %}" class="btn btn-outline-secondary rounded-pill">
+            <i class="fas fa-arrow-left me-2"></i>Retour au fil
+        </a>
+    {% else %}
+        <a href="{% url 'recherche' %}" class="btn btn-outline-secondary rounded-pill">
+            <i class="fas fa-arrow-left me-2"></i>Retour à la recherche
+        </a>
+    {% endif %}
 </div>
 
 <div class="card shadow-sm mb-4 border-0">
@@ -42,7 +48,6 @@
     </div>
 </div>
 
-<!-- Statistiques d'échanges -->
 <div class="row g-4 mb-4">
     <div class="col-md-6">
         <div class="card text-white bg-primary shadow-sm border-0">
@@ -63,7 +68,6 @@
 </div>
 
 <div class="row g-4">
-    <!-- Destinataires fréquents -->
     <div class="col-md-6">
         <div class="card h-100 shadow-sm border-0">
             <div class="card-header card-header-success border-0">
@@ -74,7 +78,9 @@
                     <ul class="list-group list-group-flush">
                     {% for dest in top_destinataires %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="text-dark">{{ dest.email }}</span>
+                            <a href="{% url 'influence' dest.id %}{% if thread_id %}?thread_id={{ thread_id }}{% endif %}" class="text-decoration-none text-dark fw-medium">
+                                {{ dest.email }}
+                            </a>
                             <span class="badge bg-primary rounded-pill">{{ dest.nb_echanges }}</span>
                         </li>
                     {% endfor %}
@@ -85,8 +91,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Expéditeurs fréquents -->
     <div class="col-md-6">
         <div class="card h-100 shadow-sm border-0">
             <div class="card-header bg-secondary border-0" style="background: linear-gradient(135deg, #6c757d 0%, #5c636a 100%); color: white;">
@@ -97,7 +101,9 @@
                     <ul class="list-group list-group-flush">
                     {% for exp in top_expediteurs %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="text-dark">{{ exp.email }}</span>
+                            <a href="{% url 'influence' exp.id %}{% if thread_id %}?thread_id={{ thread_id }}{% endif %}" class="text-decoration-none text-dark fw-medium">
+                                {{ exp.email }}
+                            </a>
                             <span class="badge bg-primary rounded-pill">{{ exp.nb_echanges }}</span>
                         </li>
                     {% endfor %}
@@ -116,9 +122,8 @@
     </a>
 </div>
 
-<!-- Bouton vers l'explorateur de dossiers -->
 <div class="mt-4 text-center">
-    <a href="{% url 'explorateur_dossiers' collaborateur.id %}" class="btn btn-info btn-lg">
+    <a href="{% url 'explorateur_dossiers' collaborateur.id %}{% if thread_id %}?thread_id={{ thread_id }}{% endif %}" class="btn btn-info btn-lg">
         <i class="fas fa-folder-open me-2"></i>Explorer les dossiers
     </a>
 </div>

@@ -1,56 +1,57 @@
-from django.contrib.postgres.search import SearchVector, SearchQuery
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from .models import Message, Collaborateur, Folder
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
-from django.shortcuts import get_object_or_404
-from django.db.models import Count, Min, Max
+from django.db.models import Count, Min, Max, Avg, Q, F
 from django.core.paginator import Paginator
 from django.db import connection
-from collections import namedtuple
-from django.db.models.functions import TruncMonth
-from datetime import datetime
-from django.db.models.functions import ExtractYear
-from django.db.models import Q
-from django.core.cache import cache
-from django.db.models.functions import ExtractHour
-from django.db.models import Avg
-from django.db.models import F
-from django.http import JsonResponse
-from collections import Counter
-import re
+from collections import namedtuple, Counter, defaultdict
+from django.db.models.functions import TruncMonth, ExtractWeekDay, ExtractHour, ExtractYear, TruncDay, TruncWeek
 from datetime import datetime, timedelta
+from django.core.cache import cache
+from django.http import JsonResponse
+import re
 
 def dashboard(request):
-    # Statistiques rapides (pas de cache nécessaire)
     total_messages = Message.objects.count()
     total_collaborateurs = Collaborateur.objects.count()
     premier_email = Message.objects.aggregate(Min('date'))['date__min']
     dernier_email = Message.objects.filter(date__lte=timezone.now()).aggregate(Max('date'))['date__max']
     total_threads = Message.objects.filter(in_reply_to__isnull=False).count()
 
-    # Données mises en cache
+    if premier_email and dernier_email:
+        period_days = (dernier_email - premier_email).days
+    else:
+        period_days = 0
+
     cache_key = 'dashboard_stats'
     cached_data = cache.get(cache_key)
+
     if cached_data:
         top_senders = cached_data['top_senders']
-        top_recipients = cached_data['top_recipients']   # ← ajout
+        top_recipients = cached_data['top_recipients']
         mois_labels = cached_data['mois_labels']
         mois_data = cached_data['mois_data']
         avg_per_day = cached_data['avg_per_day']
         top_heures = cached_data['top_heures']
         annees = cached_data['annees']
+        top_weekdays = cached_data.get('top_weekdays', [])
+        avg_per_week = cached_data.get('avg_per_week', 0)
+        avg_per_month = cached_data.get('avg_per_month', 0)
+        avg_per_year = cached_data.get('avg_per_year', 0)
+        distinct_days = cached_data.get('distinct_days', 0)
     else:
-        # Top 10 expéditeurs
+        # --- Top expéditeurs ---
         top_senders = list(Collaborateur.objects.annotate(
             nb_envoyes=Count('envoyes')
         ).order_by('-nb_envoyes')[:10])
 
-        # Top 10 destinataires (nouveau)
+        # --- Top destinataires ---
         top_recipients = list(Collaborateur.objects.annotate(
             nb_recus=Count('recus')
         ).order_by('-nb_recus')[:10])
 
-        # Statistiques mensuelles
+        # --- Graphique mensuel ---
         mois_stats = Message.objects.annotate(
             mois=TruncMonth('date')
         ).values('mois').annotate(
@@ -59,34 +60,70 @@ def dashboard(request):
         mois_labels = [m['mois'].strftime('%Y-%m') for m in mois_stats if m['mois']]
         mois_data = [m['count'] for m in mois_stats]
 
-        # Moyenne par jour
+        # --- Moyenne par jour ---
         if premier_email and dernier_email:
             total_days = (dernier_email - premier_email).days
             avg_per_day = round(total_messages / total_days) if total_days > 0 else 0
         else:
             avg_per_day = 0
 
-        # Heures les plus actives
+        # --- Heures actives ---
         top_heures = list(Message.objects.annotate(
             heure=ExtractHour('date')
         ).values('heure').annotate(
             count=Count('id')
         ).order_by('-count')[:5])
 
-        # Années distinctes
+        # --- Années distinctes ---
         annees = list(Message.objects.annotate(
             annee=ExtractYear('date')
         ).values_list('annee', flat=True).distinct().order_by('-annee'))
 
-        # Mise en cache pour 1 heure
+        # --- Jours de la semaine les plus actifs ---
+        jour_semaine_stats = Message.objects.annotate(
+            jour_semaine=ExtractWeekDay('date')
+        ).values('jour_semaine').annotate(
+            cnt=Count('id')
+        ).order_by('-cnt')[:5]
+
+        jours_map = {
+            1: 'Dimanche', 2: 'Lundi', 3: 'Mardi', 4: 'Mercredi',
+            5: 'Jeudi', 6: 'Vendredi', 7: 'Samedi'
+        }
+        top_weekdays = [
+            {'name': jours_map.get(stat['jour_semaine'], 'Inconnu'), 'count': stat['cnt']}
+            for stat in jour_semaine_stats
+        ]
+
+        # --- Moyenne par semaine ---
+        distinct_weeks = Message.objects.dates('date', 'week').count()
+        avg_per_week = round(total_messages / distinct_weeks) if distinct_weeks else 0
+
+        # --- Moyenne par mois ---
+        distinct_months = mois_stats.count()
+        avg_per_month = round(total_messages / distinct_months) if distinct_months else 0
+
+        # --- Moyenne par an ---
+        distinct_years = len(annees)
+        avg_per_year = round(total_messages / distinct_years) if distinct_years else 0
+
+        # --- Nombre de jours distincts avec emails ---
+        distinct_days = Message.objects.dates('date', 'day').count()
+
+        # Mise en cache
         cache.set(cache_key, {
             'top_senders': top_senders,
-            'top_recipients': top_recipients,   # ← ajout
+            'top_recipients': top_recipients,
             'mois_labels': mois_labels,
             'mois_data': mois_data,
             'avg_per_day': avg_per_day,
             'top_heures': top_heures,
             'annees': annees,
+            'top_weekdays': top_weekdays,
+            'avg_per_week': avg_per_week,
+            'avg_per_month': avg_per_month,
+            'avg_per_year': avg_per_year,
+            'distinct_days': distinct_days,
         }, 3600)
 
     context = {
@@ -102,6 +139,12 @@ def dashboard(request):
         'avg_per_day': avg_per_day,
         'top_heures': top_heures,
         'annees': annees,
+        'top_weekdays': top_weekdays,
+        'avg_per_week': avg_per_week,
+        'avg_per_month': avg_per_month,
+        'avg_per_year': avg_per_year,
+        'distinct_days': distinct_days,
+        'period_days': period_days,
     }
     return render(request, 'discovery/dashboard.html', context)
 
@@ -111,11 +154,18 @@ def recherche(request):
     date_fin = request.GET.get('date_fin', '')
     expediteur_id = request.GET.get('expediteur', '')
     destinataire_id = request.GET.get('destinataire', '')
+    sort = request.GET.get('sort', '-date')  # nouveau paramètre
 
-    messages = Message.objects.select_related('expediteur').prefetch_related('destinataires').all().order_by('-date')
+    messages = Message.objects.prefetch_related('destinataires').select_related('expediteur').all()
 
     if query:
-        messages = messages.filter(search_vector=SearchQuery(query, search_type='websearch'))
+        # Utiliser SearchVector pour la recherche plein texte
+        from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+        search_vector = SearchVector('objet', weight='A') + SearchVector('corps', weight='B')
+        search_query = SearchQuery(query, search_type='websearch')
+        messages = messages.annotate(
+            rank=SearchRank(search_vector, search_query)
+        ).filter(search_vector=search_query)
 
     if date_debut:
         try:
@@ -135,6 +185,14 @@ def recherche(request):
         messages = messages.filter(expediteur_id=int(expediteur_id))
     if destinataire_id and destinataire_id.isdigit():
         messages = messages.filter(destinataires__id=int(destinataire_id))
+
+    # Application du tri
+    if sort == 'relevance' and query:
+        messages = messages.order_by('-rank')
+    elif sort == 'date':
+        messages = messages.order_by('date')
+    else:  # par défaut : -date (le plus récent en premier)
+        messages = messages.order_by('-date')
 
     paginator = Paginator(messages, 20)
     page_number = request.GET.get('page')
@@ -170,25 +228,25 @@ def recherche(request):
         'destinataires': destinataires,
         'selected_expediteur': selected_expediteur,
         'selected_destinataire': selected_destinataire,
+        'sort': sort,  # transmettre au template pour conserver le choix
     }
     return render(request, 'discovery/recherche.html', context)
 
 def influence(request, employee_id):
     collaborateur = get_object_or_404(Collaborateur, id=employee_id)
+    thread_id = request.GET.get('thread_id')  # récupère l'ID du message source
 
     sent_count = Message.objects.filter(expediteur=collaborateur).count()
     received_count = Message.objects.filter(destinataires=collaborateur).count()
 
-    # Destinataires les plus fréquents (personnes à qui il écrit)
     top_destinataires = Collaborateur.objects.filter(
-        recus__expediteur=collaborateur  # messages reçus par le destinataire ET envoyés par collaborateur
+        recus__expediteur=collaborateur
     ).annotate(
         nb_echanges=Count('recus')
     ).order_by('-nb_echanges')[:10]
 
-    # Expéditeurs les plus fréquents (personnes qui lui écrivent)
     top_expediteurs = Collaborateur.objects.filter(
-        envoyes__destinataires=collaborateur  # messages envoyés par l'expéditeur ET reçus par collaborateur
+        envoyes__destinataires=collaborateur
     ).annotate(
         nb_echanges=Count('envoyes')
     ).order_by('-nb_echanges')[:10]
@@ -199,18 +257,17 @@ def influence(request, employee_id):
         'received_count': received_count,
         'top_destinataires': top_destinataires,
         'top_expediteurs': top_expediteurs,
+        'thread_id': thread_id,  # nouveau
     }
     return render(request, 'discovery/influence.html', context)
 
 def thread(request, message_id):
-    # Récupère le message principal avec l'expéditeur
     message = get_object_or_404(Message.objects.select_related('expediteur'), id=message_id)
+    folder_id = request.GET.get('folder_id')
 
-    # Messages précédent et suivant (basés sur la date)
     previous_message = Message.objects.filter(date__lt=message.date).order_by('-date').first()
     next_message = Message.objects.filter(date__gt=message.date).order_by('date').first()
 
-    # Fonction récursive pour obtenir les réponses avec indentation
     def get_replies(msg, niveau=1):
         replies = Message.objects.select_related('expediteur').filter(in_reply_to=msg.message_id).order_by('date')
         result = []
@@ -227,14 +284,13 @@ def thread(request, message_id):
         'replies': replies,
         'previous_message': previous_message,
         'next_message': next_message,
+        'folder_id': folder_id,
     }
     return render(request, 'discovery/thread.html', context)
 
 def thread_complet(request, message_id):
-    # Récupère le message de départ
     message = get_object_or_404(Message, id=message_id)
 
-    # Trouve la racine du fil (le premier message de la conversation)
     racine = message
     while racine.in_reply_to:
         try:
@@ -242,30 +298,47 @@ def thread_complet(request, message_id):
         except Message.DoesNotExist:
             break
 
-    # Requête SQL récursive avec jointure pour obtenir l'email
     with connection.cursor() as cursor:
         cursor.execute("""
             WITH RECURSIVE thread AS (
-                SELECT m.id, m.message_id, m.in_reply_to, m.objet, m.date, m.corps, c.email, 1 as niveau
+                SELECT m.id, m.message_id, m.in_reply_to, m.objet, m.date, m.corps,
+                       c.email, c.id as expediteur_id, 1 as niveau
                 FROM discovery_message m
                 JOIN discovery_collaborateur c ON m.expediteur_id = c.id
                 WHERE m.id = %s
                 UNION ALL
-                SELECT m.id, m.message_id, m.in_reply_to, m.objet, m.date, m.corps, c.email, t.niveau + 1
+                SELECT m.id, m.message_id, m.in_reply_to, m.objet, m.date, m.corps,
+                       c.email, c.id as expediteur_id, t.niveau + 1
                 FROM discovery_message m
                 INNER JOIN thread t ON m.in_reply_to = t.message_id
                 JOIN discovery_collaborateur c ON m.expediteur_id = c.id
             )
-            SELECT id, message_id, in_reply_to, objet, date, email, corps, niveau
+            SELECT id, message_id, in_reply_to, objet, date, email, corps, niveau, expediteur_id
             FROM thread
             ORDER BY date;
         """, [racine.id])
 
         rows = cursor.fetchall()
 
-    # Définir un namedtuple pour accéder aux colonnes par nom
-    MessageNode = namedtuple('MessageNode', ['id', 'message_id', 'in_reply_to', 'objet', 'date', 'email', 'corps', 'niveau'])
-    messages_fil = [MessageNode(*row) for row in rows]
+    # Créer une liste de dictionnaires pour ajouter les destinataires
+    MessageNode = namedtuple('MessageNode', ['id', 'message_id', 'in_reply_to', 'objet', 'date', 'email', 'corps', 'niveau', 'expediteur_id'])
+    messages_fil = [MessageNode(*row)._asdict() for row in rows]
+
+    # Récupérer les destinataires pour tous ces messages
+    message_ids = [m['id'] for m in messages_fil]
+    if message_ids:
+        dest_query = Message.destinataires.through.objects.filter(
+            message_id__in=message_ids
+        ).select_related('collaborateur')
+        dest_par_msg = defaultdict(list)
+        for dest in dest_query:
+            dest_par_msg[dest.message_id].append(dest.collaborateur)
+
+        for msg in messages_fil:
+            msg['destinataires'] = dest_par_msg.get(msg['id'], [])
+    else:
+        for msg in messages_fil:
+            msg['destinataires'] = []
 
     context = {
         'messages_fil': messages_fil,
@@ -300,50 +373,56 @@ def graphe(request, collaborateur_id):
 
 def graphe_data(request):
     min_echanges = int(request.GET.get('min', 2))
-    max_nodes = int(request.GET.get('max_nodes', 200))
-
+    max_nodes = int(request.GET.get('max_nodes', 80))  # réduit à 80 pour de meilleures performances
     cache_key = f"graphe_data_{min_echanges}_{max_nodes}"
     data = cache.get(cache_key)
     if data:
         return JsonResponse(data)
 
-    # Récupérer les collaborateurs les plus actifs
+    # 1. Récupérer les collaborateurs les plus actifs
     collaborateurs = Collaborateur.objects.annotate(
         total=Count('envoyes') + Count('recus')
     ).filter(total__gt=0).order_by('-total')[:max_nodes]
+    collab_ids = [c.id for c in collaborateurs]
 
-    collab_ids = set(c.id for c in collaborateurs)
-    nodes = []
-    for c in collaborateurs:
-        nodes.append({
-            'id': c.id,
-            'label': c.email,
-            'title': f"{c.email} (total échanges: {c.total})",
-            'value': c.total,
-        })
+    if not collab_ids:
+        return JsonResponse({'nodes': [], 'edges': []})
 
-    # Compter les échanges entre ces collaborateurs
-    echanges = Message.objects.filter(
-        expediteur__in=collab_ids,
-        destinataires__in=collab_ids
-    ).exclude(
-        expediteur=F('destinataires')
-    ).values('expediteur_id', 'destinataires').annotate(
-        count=Count('id')
-    ).filter(count__gte=min_echanges)
+    # 2. Construire les nœuds
+    nodes = [{
+        'id': c.id,
+        'label': c.email,
+        'title': f"{c.email} (total échanges: {c.total})",
+        'value': c.total
+    } for c in collaborateurs]
 
-    edges = []
-    for e in echanges:
-        edges.append({
-            'from': e['expediteur_id'],
-            'to': e['destinataires'],  # ← 'destinataires' donne l'ID du destinataire
-            'value': e['count'],
-            'title': f"{e['count']} échanges",
-        })
+    # 3. Requête SQL brute avec les IDs en paramètres
+    # On construit la liste des placeholders pour les IDs
+    ids_placeholder = ','.join(['%s'] * len(collab_ids))
+    query = f"""
+        SELECT m.expediteur_id, dmd.collaborateur_id, COUNT(*) as nb
+        FROM discovery_message_destinataires dmd
+        INNER JOIN discovery_message m ON dmd.message_id = m.id
+        WHERE m.expediteur_id IN ({ids_placeholder})
+          AND dmd.collaborateur_id IN ({ids_placeholder})
+          AND m.expediteur_id != dmd.collaborateur_id
+        GROUP BY m.expediteur_id, dmd.collaborateur_id
+        HAVING COUNT(*) >= %s
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(query, collab_ids + collab_ids + [min_echanges])
+        rows = cursor.fetchall()
 
-    data = {'nodes': nodes, 'edges': edges}
-    cache.set(cache_key, data, 3600)
-    return JsonResponse(data)
+    edges = [{
+        'from': row[0],
+        'to': row[1],
+        'value': row[2],
+        'title': f"{row[2]} échanges"
+    } for row in rows]
+
+    result = {'nodes': nodes, 'edges': edges}
+    cache.set(cache_key, result, 3600)  # cache 1 heure
+    return JsonResponse(result)
 
 def graphe_interactif(request):
     return render(request, 'discovery/graphe_interactif.html')
@@ -374,7 +453,8 @@ def wordcloud_data(request):
 
 def explorateur_dossiers(request, collaborateur_id):
     collaborateur = get_object_or_404(Collaborateur, id=collaborateur_id)
-    # Récupère tous les dossiers où ce collaborateur a envoyé des messages
+    thread_id = request.GET.get('thread_id')  # pour revenir au fil
+
     folders = Folder.objects.filter(
         messages__message__expediteur=collaborateur
     ).annotate(
@@ -384,6 +464,7 @@ def explorateur_dossiers(request, collaborateur_id):
     context = {
         'collaborateur': collaborateur,
         'folders': folders,
+        'thread_id': thread_id,
     }
     return render(request, 'discovery/explorateur_dossiers.html', context)
 
@@ -406,18 +487,42 @@ def autocomplete_destinataires(request):
 def tous_emails_collaborateur(request, collaborateur_id):
     collaborateur = get_object_or_404(Collaborateur, pk=collaborateur_id)
 
-    # Tous les messages où le collaborateur est expéditeur OU destinataire
-    messages = Message.objects.filter(
-        Q(expediteur=collaborateur) | Q(destinataires=collaborateur)
-    ).distinct().order_by('-date')  # distinct évite les doublons si un message est dans les deux
+    # Récupérer le numéro de page pour la clé de cache
+    page = request.GET.get('page', 1)
+    cache_key = f"tous_emails_{collaborateur_id}_{page}"
+    page_obj = cache.get(cache_key)
 
-    # Pagination (par exemple 20 messages par page)
-    paginator = Paginator(messages, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    if page_obj is None:
+        # Requête optimisée avec select_related et prefetch_related
+        messages = Message.objects.filter(
+            Q(expediteur=collaborateur) | Q(destinataires=collaborateur)
+        ).distinct().select_related('expediteur').prefetch_related('destinataires').order_by('-date')
+
+        paginator = Paginator(messages, 20)
+        page_obj = paginator.get_page(page)
+
+        # Mettre en cache pour 15 minutes (900 secondes)
+        cache.set(cache_key, page_obj, 900)
 
     context = {
         'collaborateur': collaborateur,
         'page_obj': page_obj,
     }
     return render(request, 'discovery/tous_emails.html', context)
+
+def contenu_dossier(request, collaborateur_id, folder_id):
+    collaborateur = get_object_or_404(Collaborateur, id=collaborateur_id)
+    folder = get_object_or_404(Folder, id=folder_id)
+    messages = Message.objects.filter(
+        expediteur=collaborateur,
+        folders__folder=folder
+    ).select_related('expediteur').prefetch_related('destinataires').order_by('-date')
+    paginator = Paginator(messages, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    context = {
+        'collaborateur': collaborateur,
+        'folder': folder,
+        'page_obj': page_obj,
+    }
+    return render(request, 'discovery/contenu_dossier.html', context)

@@ -1,4 +1,5 @@
 {% extends 'discovery/base.html' %}
+{% load static %}
 
 {% block title %}Recherche - Enron Discovery{% endblock %}
 
@@ -39,6 +40,13 @@
     .select2-container--default .select2-selection--single .select2-selection__arrow {
         height: 3.5rem;
     }
+    /* Style pour les mots surlignés */
+    mark {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 0 2px;
+        border-radius: 3px;
+    }
 </style>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
@@ -56,65 +64,73 @@
 <!-- Formulaire de recherche -->
 <div class="card search-card mb-4">
     <div class="card-body bg-white p-4">
-        <form method="get" class="row g-3">
-            <div class="col-md-6">
+        <form method="get" class="row g-3" id="searchForm">
+            <div class="col-12">
                 <label for="q" class="form-label fw-medium text-dark">Mots-clés</label>
                 <input type="text" class="form-control rounded-pill" id="q" name="q" placeholder="Ex: meeting" value="{{ query }}">
                 <small class="text-muted">
                     Astuces : utilisez "guillemets" pour une phrase exacte, -mot pour exclure, OR pour l'un ou l'autre.
                 </small>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <label for="date_debut" class="form-label fw-medium text-dark">Date début</label>
                 <input type="date" class="form-control rounded-pill" id="date_debut" name="date_debut" value="{{ date_debut }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <label for="date_fin" class="form-label fw-medium text-dark">Date fin</label>
                 <input type="date" class="form-control rounded-pill" id="date_fin" name="date_fin" value="{{ date_fin }}">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <label for="expediteur" class="form-label fw-medium text-dark">Expéditeur</label>
                 <select class="form-select rounded-pill" id="expediteur" name="expediteur" style="width: 100%;"></select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <label for="destinataire" class="form-label fw-medium text-dark">Destinataire</label>
                 <select class="form-select rounded-pill" id="destinataire" name="destinataire" style="width: 100%;"></select>
             </div>
-            <div class="col-md-2">
-                <div class="row g-2">
-                    <div class="col-6">
-                        <button type="submit" class="btn btn-primary w-100 rounded-pill">
-                            <i class="fas fa-search me-2"></i>Rechercher
-                        </button>
-                    </div>
-                    <div class="col-6">
-                        <a href="{% url 'recherche' %}" class="btn btn-outline-secondary w-100 rounded-pill">
-                            <i class="fas fa-eraser me-2"></i>Effacer
-                        </a>
-                    </div>
+            <div class="col-12">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill rounded-pill">
+                        <i class="fas fa-search me-2"></i>Rechercher
+                    </button>
+                    <a href="{% url 'recherche' %}" class="btn btn-outline-secondary flex-fill rounded-pill">
+                        <i class="fas fa-eraser me-2"></i>Effacer
+                    </a>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
+<!-- Tri personnalisable -->
+{% if page_obj %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h5 class="mb-0 text-secondary">{{ page_obj.paginator.count }} résultat(s) trouvé(s)</h5>
+    <div class="d-flex align-items-center gap-2">
+        <label for="sort" class="mb-0 text-muted">Trier par :</label>
+        <select id="sort" class="form-select form-select-sm w-auto rounded-pill">
+            <option value="-date" {% if sort == '-date' %}selected{% endif %}>Date (récent → ancien)</option>
+            <option value="date" {% if sort == 'date' %}selected{% endif %}>Date (ancien → récent)</option>
+            {% if query %}
+            <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>Pertinence</option>
+            {% endif %}
+        </select>
+    </div>
+</div>
+{% endif %}
+
 <!-- Résultats -->
 {% if page_obj %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0 text-secondary">{{ page_obj.paginator.count }} résultat(s) trouvé(s)</h5>
-        <span class="badge bg-light text-dark rounded-pill px-3 py-2">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    </div>
-
     <div class="list-group mb-4">
         {% for msg in page_obj %}
         <div class="list-group-item result-item p-3 mb-2">
             <div class="d-flex w-100 justify-content-between">
                 <h6 class="mb-1">
-                    <a href="{% url 'thread' msg.id %}" class="text-decoration-none fw-bold text-primary">{{ msg.objet }}</a>
+                    <a href="{% url 'thread' msg.id %}" class="text-decoration-none fw-bold text-primary highlight-title">{{ msg.objet }}</a>
                 </h6>
                 <small class="text-muted">{{ msg.date|date:"d/m/Y H:i" }}</small>
             </div>
-            <p class="mb-1 text-secondary">{{ msg.corps|truncatewords:30 }}</p>
+            <p class="mb-1 text-secondary highlight-body">{{ msg.corps|truncatewords:30 }}</p>
             
             <!-- Destinataires -->
             <div class="mt-1 small">
@@ -137,11 +153,10 @@
                         <i class="fas fa-user me-1 text-primary"></i>
                         <a href="{% url 'influence' msg.expediteur.id %}" class="text-decoration-none text-dark">{{ msg.expediteur.email }}</a>
                     </span>
-                    <!-- Ajout du lien Fil complet -->
-        <span class="badge bg-light text-dark ms-2">
-            <i class="fas fa-reply-all me-1 text-success"></i>
-            <a href="{% url 'thread_complet' msg.id %}" class="text-decoration-none">Fil complet</a>
-        </span>
+                    <span class="badge bg-light text-dark ms-2">
+                        <i class="fas fa-reply-all me-1 text-success"></i>
+                        <a href="{% url 'thread_complet' msg.id %}" class="text-decoration-none">Fil complet</a>
+                    </span>
                 </div>
                 <small class="text-muted">ID: {{ msg.id }}</small>
             </div>
@@ -149,17 +164,17 @@
         {% endfor %}
     </div>
 
-    <!-- Pagination -->
+    <!-- Pagination avec conservation du tri -->
     <nav aria-label="Pagination">
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&page=1" aria-label="Première">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&sort={{ sort }}&page=1" aria-label="Première">
                         <span aria-hidden="true">&laquo;&laquo;</span>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&page={{ page_obj.previous_page_number }}" aria-label="Précédente">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&sort={{ sort }}&page={{ page_obj.previous_page_number }}" aria-label="Précédente">
                         <span aria-hidden="true">&laquo;</span>
                     </a>
                 </li>
@@ -171,12 +186,12 @@
 
             {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&page={{ page_obj.next_page_number }}" aria-label="Suivante">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&sort={{ sort }}&page={{ page_obj.next_page_number }}" aria-label="Suivante">
                         <span aria-hidden="true">&raquo;</span>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&page={{ page_obj.paginator.num_pages }}" aria-label="Dernière">
+                    <a class="page-link rounded-pill mx-1" href="?q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&expediteur={{ expediteur_id }}&destinataire={{ destinataire_id }}&sort={{ sort }}&page={{ page_obj.paginator.num_pages }}" aria-label="Dernière">
                         <span aria-hidden="true">&raquo;&raquo;</span>
                     </a>
                 </li>
@@ -258,6 +273,62 @@ $(document).ready(function() {
     var destinataireOption = new Option('{{ selected_destinataire.email }}', '{{ selected_destinataire.id }}', true, true);
     $('#destinataire').append(destinataireOption).trigger('change');
     {% endif %}
+
+    // Gestion du tri
+    const sortSelect = document.getElementById('sort');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('sort', this.value);
+            url.searchParams.delete('page'); // on revient à la première page
+            window.location.href = url.toString();
+        });
+    }
+
+    // Mise en surbrillance des mots-clés
+    const query = "{{ query|escapejs }}";
+    if (query && query.trim() !== "") {
+        // Nettoyer la requête : enlever les guillemets, les opérateurs, etc.
+        let terms = [];
+        // On garde les mots entre guillemets comme une phrase, et les autres mots
+        const re = /"([^"]+)"|(\S+)/g;
+        let match;
+        while ((match = re.exec(query)) !== null) {
+            if (match[1]) {
+                terms.push(match[1]); // phrase entre guillemets
+            } else if (match[2]) {
+                terms.push(match[2]);
+            }
+        }
+        // On filtre les opérateurs communs
+        terms = terms.filter(term => !['OR', 'AND', 'NOT', '-'].includes(term.toUpperCase()) && term !== '-');
+        if (terms.length === 0) return;
+
+        const highlight = function(node, words) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                let text = node.textContent;
+                let replaced = false;
+                words.forEach(term => {
+                    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                    if (regex.test(text)) {
+                        replaced = true;
+                        text = text.replace(regex, '<mark>$1</mark>');
+                    }
+                });
+                if (replaced) {
+                    const span = document.createElement('span');
+                    span.innerHTML = text;
+                    node.parentNode.replaceChild(span, node);
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE && !['SCRIPT', 'STYLE', 'MARK'].includes(node.tagName)) {
+                node.childNodes.forEach(child => highlight(child, words));
+            }
+        };
+
+        document.querySelectorAll('.highlight-title, .highlight-body').forEach(el => {
+            highlight(el, terms);
+        });
+    }
 });
 </script>
 {% endblock %}

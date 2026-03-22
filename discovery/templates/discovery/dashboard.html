@@ -5,7 +5,6 @@
 
 {% block extra_head %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.0.2/wordcloud2.min.js"></script>
     <style>
         body {
             background-color: #f0f2f5;
@@ -62,13 +61,6 @@
             color: #6c757d;
             font-weight: 500;
         }
-        .badge-primary {
-            background-color: #0d6efd;
-        }
-        #wordCloudCanvas {
-            width: 100%;
-            height: 300px;
-        }
     </style>
 {% endblock %}
 
@@ -82,7 +74,27 @@
     </div>
 </div>
 
-<!-- Cartes statistiques -->
+<!-- Message de bienvenue -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm bg-light">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-hand-sparkles fa-2x text-primary me-3"></i>
+                    <h3 class="mb-0 fw-bold text-dark">Bienvenue sur Enron Discovery</h3>
+                </div>
+                <p class="lead text-secondary mb-3">
+                    Cette plateforme d’investigation numérique (e‑Discovery) s’appuie sur le célèbre <em>Enron Corpus</em>, un jeu de données de plus de 500 000 emails issus d’une entreprise réelle à la suite d’un scandale financier majeur.
+                </p>
+                <p class="mb-0 text-secondary">
+                    L’application transforme cette masse de données brutes non structurées en un outil fonctionnel qui permet aux journalistes et aux auditeurs de naviguer dans les échanges, d’identifier les acteurs clés et de rechercher des informations critiques.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cartes statistiques : total emails et collaborateurs -->
 <div class="row g-4 mb-5">
     <div class="col-md-6">
         <div class="card stat-card" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);">
@@ -104,7 +116,29 @@
     </div>
 </div>
 
-<!-- Graphique -->
+<!-- Cartes période et durée -->
+<div class="row g-4 mb-5">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-calendar-alt me-2 text-primary"></i>Période couverte</h5>
+                <p class="card-text lead">
+                    Du {{ premier_email|date:"d/m/Y" }} au {{ dernier_email|date:"d/m/Y" }}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-hourglass-half me-2 text-primary"></i>Durée</h5>
+                <p class="card-text lead">{{ period_days }} jours</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphique mensuel -->
 <div class="chart-container mb-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0"><i class="fas fa-chart-bar me-2 text-primary"></i>Évolution mensuelle</h5>
@@ -120,20 +154,58 @@
     <canvas id="mailChart" style="max-height: 400px;"></canvas>
 </div>
 
-<!-- Statistiques avancées -->
+<!-- Moyennes par jour, semaine, mois, an -->
 <div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card shadow-sm">
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
             <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2 text-primary"></i>Moyenne par jour</h5>
+                <h5 class="mb-0"><i class="fas fa-calendar-day me-2 text-primary"></i>Moyenne par jour</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body text-center">
                 <h3>{{ avg_per_day }} emails/jour</h3>
+                <small class="text-muted">{{ distinct_days }} jours d'activité</small>
             </div>
         </div>
     </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-week me-2 text-primary"></i>Moyenne par semaine</h5>
+            </div>
+            <div class="card-body text-center">
+                <h3>{{ avg_per_week }} emails/semaine</h3>
+                <small class="text-muted">semaines avec activité</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2 text-primary"></i>Moyenne par mois</h5>
+            </div>
+            <div class="card-body text-center">
+                <h3>{{ avg_per_month }} emails/mois</h3>
+                <small class="text-muted">mois distincts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-calendar me-2 text-primary"></i>Moyenne par an</h5>
+            </div>
+            <div class="card-body text-center">
+                <h3>{{ avg_per_year }} emails/an</h3>
+                <small class="text-muted">années distinctes</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top heures et top jours de la semaine -->
+<div class="row g-4 mb-5">
     <div class="col-md-6">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm h-100">
             <div class="card-header bg-white">
                 <h5 class="mb-0"><i class="fas fa-clock me-2 text-primary"></i>Heures les plus actives</h5>
             </div>
@@ -149,85 +221,65 @@
             </div>
         </div>
     </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-week me-2 text-primary"></i>Jours de la semaine les plus actifs</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for day in top_weekdays %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ day.name }}
+                        <span class="badge bg-primary rounded-pill">{{ day.count }} messages</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">Aucune donnée</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Nuage de mots -->
+<!-- Tableau des 40 mots les plus fréquents (deux colonnes) -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-cloud me-2"></i>Nuage de mots (sujets des emails)</h5>
+        <h5 class="mb-0"><i class="fas fa-chart-simple me-2"></i>Mots les plus fréquents (sujets des emails)</h5>
     </div>
     <div class="card-body">
-        <canvas id="wordCloudCanvas" width="600" height="250" style="width:100%; height:250px;"></canvas>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover" id="wordTableLeft">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Mot</th>
+                                <th class="text-end">Occurrences</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover" id="wordTableRight">
+                        <thead>
+                             …
+                                <th>#</th>
+                                <th>Mot</th>
+                                <th class="text-end">Occurrences</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-
-<!-- Inclusion de la bibliothèque WordCloud (si ce n'est pas déjà fait) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.0.2/wordcloud2.min.js"></script>
-
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    fetch("{% url 'wordcloud_data' %}")
-      .then(response => response.json())
-      .then(data => {
-        console.log('Données du nuage :', data); // Pour déboguer
-        if (data && data.length > 0) {
-          // Transformer en tableau de paires [mot, poids]
-          const words = data.map(item => [item.word, item.weight]);
-          WordCloud(document.getElementById('wordCloudCanvas'), {
-            list: words,
-            gridSize: 12,
-            weightFactor: 0.8,
-            fontFamily: 'Arial',
-            color: 'random-dark',
-            rotateRatio: 0.5,
-            shape: 'circle',
-            ellipticity: 0.65
-          });
-        } else {
-          console.warn('Aucune donnée pour le nuage de mots');
-        }
-      })
-      .catch(err => console.error('Erreur lors du chargement du nuage :', err));
-  });
-</script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.0.2/wordcloud2.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  fetch("{% url 'wordcloud_data' %}")
-    .then(response => response.json())
-    .then(data => {
-      console.log('Données reçues:', data); // pour vérifier
-      if (data && data.length > 0) {
-        // Transformer en tableau de paires [mot, poids]
-        const words = data.map(item => [item.word, item.weight]);
-        
-        // Trouver le poids maximum
-        const maxWeight = Math.max(...words.map(item => item[1]));
-        // Taille maximale souhaitée pour les mots (en pixels)
-        const targetMaxSize = 80;
-        const weightFactor = targetMaxSize / maxWeight;
-
-        // Options du nuage
-        const options = {
-          list: words,
-          gridSize: 16,
-          weightFactor: weightFactor,
-          fontFamily: 'Arial',
-          color: 'random-dark',
-          rotateRatio: 0.5,
-          shape: 'circle',
-          ellipticity: 0.65,
-        };
-
-        WordCloud(document.getElementById('wordCloudCanvas'), options);
-      } else {
-        console.warn('Aucune donnée pour le nuage de mots');
-      }
-    })
-    .catch(err => console.error('Erreur lors du chargement du nuage :', err));
-});
-</script>
 
 <!-- Top expéditeurs -->
 <div class="card shadow-sm">
@@ -237,11 +289,11 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="card-body">
         <table class="table table-hover align-middle">
             <thead>
-                <tr>
+                 …
                     <th>#</th>
                     <th>Email</th>
                     <th class="text-end">Messages envoyés</th>
-                </tr>
+                 </tr>
             </thead>
             <tbody>
                 {% for sender in top_senders %}
@@ -266,11 +318,11 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="card-body">
         <table class="table table-hover align-middle">
             <thead>
-                <tr>
+                 …
                     <th>#</th>
                     <th>Email</th>
                     <th class="text-end">Messages reçus</th>
-                </tr>
+                 </tr>
             </thead>
             <tbody>
                 {% for recipient in top_recipients %}
@@ -342,38 +394,55 @@ document.addEventListener('DOMContentLoaded', function() {
         chart.update();
     });
 
-    // Nuage de mots
-    // Nuage de mots
-fetch('/wordcloud-data/')
-    .then(response => response.json())
-    .then(data => {
-        if (typeof WordCloud === 'undefined') {
-            console.error('WordCloud library not loaded');
-            return;
-        }
-        // Limiter à 30 mots
-        data = data.slice(0, 30);
-        console.log('Données reçues (30 premiers):', data);
-        var canvas = document.getElementById('wordCloudCanvas');
-        if (!canvas) {
-            console.error('Canvas not found');
-            return;
-        }
-        var options = {
-            list: data.map(item => [item.word, item.weight]),
-            gridSize: 16,
-            weightFactor: function(w) {
-                // Échelle réduite : racine carrée * 2
-                return Math.sqrt(w) * 2;
-            },
-            fontFamily: 'Arial, sans-serif',
-            color: 'random-dark',
-            rotateRatio: 0.3,
-            shape: 'circle',
-            ellipticity: 0.65
-        };
-        WordCloud(canvas, options);
-    })
-    .catch(error => console.error('Erreur chargement wordcloud:', error));
+    // Chargement et affichage des 40 mots les plus fréquents (deux colonnes)
+    fetch("{% url 'wordcloud_data' %}")
+        .then(response => response.json())
+        .then(data => {
+            const leftTbody = document.querySelector('#wordTableLeft tbody');
+            const rightTbody = document.querySelector('#wordTableRight tbody');
+            leftTbody.innerHTML = '';
+            rightTbody.innerHTML = '';
+
+            if (data && data.length > 0) {
+                const half = Math.ceil(data.length / 2);  // 20 mots par colonne
+                const leftData = data.slice(0, half);
+                const rightData = data.slice(half, 40);
+
+                leftData.forEach((item, idx) => {
+                    const row = `
+                        <tr>
+                            <td class="fw-bold text-secondary">${idx + 1}</td>
+                            <td>${escapeHtml(item.word)}</td>
+                            <td class="text-end"><span class="badge bg-primary rounded-pill">${item.weight}</span></td>
+                        </tr>
+                    `;
+                    leftTbody.insertAdjacentHTML('beforeend', row);
+                });
+
+                rightData.forEach((item, idx) => {
+                    const row = `
+                        <tr>
+                            <td class="fw-bold text-secondary">${half + idx + 1}</td>
+                            <td>${escapeHtml(item.word)}</td>
+                            <td class="text-end"><span class="badge bg-primary rounded-pill">${item.weight}</span></td>
+                        </tr>
+                    `;
+                    rightTbody.insertAdjacentHTML('beforeend', row);
+                });
+            } else {
+                leftTbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Aucune donnée</td></tr>';
+                rightTbody.innerHTML = '';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur chargement mots:', error);
+            document.querySelector('#wordTableLeft tbody').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erreur de chargement</td></tr>';
+        });
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 </script>
 {% endblock %}
