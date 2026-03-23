@@ -19,4 +19,5 @@ urlpatterns = [
     path('collaborateur/<int:collaborateur_id>/dossiers/', views.explorateur_dossiers, name='explorateur_dossiers'),
     path('collaborateur/<int:collaborateur_id>/dossier/<int:folder_id>/', views.contenu_dossier, name='contenu_dossier'),
     path('thread/<int:message_id>/', views.thread, name='thread'),
+    path('collaborateur/<int:collaborateur_id>/graphe/', views.graphe_utilisateur, name='graphe_utilisateur'),
 ]

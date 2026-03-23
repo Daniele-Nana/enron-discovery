@@ -526,3 +526,52 @@ def contenu_dossier(request, collaborateur_id, folder_id):
         'page_obj': page_obj,
     }
     return render(request, 'discovery/contenu_dossier.html', context)
+
+def graphe_utilisateur(request, collaborateur_id):
+    collaborateur = get_object_or_404(Collaborateur, id=collaborateur_id)
+
+    # Récupérer les collaborateurs avec lesquels il interagit le plus
+    # (destinataires et expéditeurs)
+    destinataires = Collaborateur.objects.filter(
+        recus__expediteur=collaborateur
+    ).annotate(
+        nb_echanges=Count('recus')
+    ).order_by('-nb_echanges')[:20]
+
+    expediteurs = Collaborateur.objects.filter(
+        envoyes__destinataires=collaborateur
+    ).annotate(
+        nb_echanges=Count('envoyes')
+    ).order_by('-nb_echanges')[:20]
+
+    # Fusionner les deux listes (sans doublons)
+    connexions = {}
+    for d in destinataires:
+        connexions[d.id] = {'email': d.email, 'nb': d.nb_echanges, 'type': 'destinataire'}
+    for e in expediteurs:
+        if e.id in connexions:
+            connexions[e.id]['nb'] += e.nb_echanges
+            connexions[e.id]['type'] = 'mutuel'
+        else:
+            connexions[e.id] = {'email': e.email, 'nb': e.nb_echanges, 'type': 'expediteur'}
+
+    # Trier par nombre d'échanges
+    connexions_list = sorted(connexions.items(), key=lambda x: x[1]['nb'], reverse=True)[:20]
+
+    # Construire les nœuds (collaborateur central + connexions)
+    nodes = [{'id': collaborateur.id, 'label': collaborateur.email, 'group': 'central'}]
+    for c_id, data in connexions_list:
+        nodes.append({'id': c_id, 'label': data['email'], 'group': data['type']})
+
+    # Construire les arêtes
+    edges = []
+    for c_id, data in connexions_list:
+        edges.append({'from': collaborateur.id, 'to': c_id, 'value': data['nb'], 'title': f"{data['nb']} échanges"})
+
+    # Passer les données au template
+    context = {
+        'collaborateur': collaborateur,
+        'nodes': nodes,
+        'edges': edges,
+    }
+    return render(request, 'discovery/graphe_utilisateur.html', context)

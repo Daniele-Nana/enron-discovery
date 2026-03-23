@@ -127,4 +127,10 @@
         <i class="fas fa-folder-open me-2"></i>Explorer les dossiers
     </a>
 </div>
+
+<div class="mt-4 text-center">
+    <a href="{% url 'graphe_utilisateur' collaborateur.id %}" class="btn btn-info btn-lg">
+        <i class="fas fa-project-diagram me-2"></i>Voir le graphe d'influence
+    </a>
+</div>
 {% endblock %}
