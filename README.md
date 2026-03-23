@@ -1,194 +1,211 @@
-# Projet Enron Discovery
+# Enron Discovery
 
-## Description
+**Plateforme d'investigation numérique (e-Discovery) — M1 Data Science — Université d'Angers — 2026**
 
-Ce projet a été réalisé dans le cadre d'un travail d'investigation numérique (e-Discovery). Il exploite le célèbre **Enron Email Dataset** (plus de 500 000 emails) pour fournir une interface web permettant aux journalistes et auditeurs de :
-
-- Naviguer dans les échanges,
-- Identifier les acteurs clés,
-- Rechercher des informations critiques,
-- Visualiser les fils de discussion,
-- Analyser les connexions entre collaborateurs.
-
-L'application est construite avec **Django** et utilise **PostgreSQL** pour le stockage, avec une recherche plein texte optimisée.
+Réalisé par **Danièle Isabelle Nana Fotzeu** et **Mawaki Kahon**
 
 ---
 
-## Fonctionnalités
+## Présentation
 
-- **Dashboard** : statistiques globales (nombre d'emails, top 10 des expéditeurs, graphique d'évolution mensuelle, filtre par année).
-- **Recherche avancée** : par mots-clés, plage de dates, expéditeur (avec pagination et extrait du corps).
-- **Explorateur de threads** : affichage d'un message et de toutes ses réponses avec indentation visuelle (version simple et version complète avec CTE récursive).
-- **Graphe d'influence** : pour un collaborateur, liste des personnes avec qui il échange le plus (émissions et réceptions).
+**Enron Discovery** est une application web permettant aux journalistes et auditeurs d'explorer le célèbre *Enron Corpus* — plus de 500 000 emails échangés par les cadres d'Enron avant le scandale financier de 2001.
+
+L'application permet de :
+
+- Naviguer dans les échanges par dossiers, expéditeurs et destinataires
+- Visualiser des statistiques globales (volume, top acteurs, évolution temporelle)
+- Effectuer des recherches avancées (plein texte, filtres par dates, expéditeur, destinataire)
+- Explorer les fils de discussion complets
+- Analyser les relations d'influence via un graphe interactif
+
+---
+
+## Stack technique
+
+| Composant | Technologie | Justification |
+|---|---|---|
+| Backend | Django 6.0 (Python 3.12) | Rapidité de développement, ORM puissant |
+| Base de données | PostgreSQL 15 | Index GIN natif pour le Full-Text Search |
+| Recherche plein texte | `SearchVectorField` + `SearchQuery` | Requêtes performantes sur le contenu des messages |
+| Frontend | Bootstrap 5, Chart.js, vis.js, Select2 | Interface responsive et graphiques interactifs |
+| Conteneurisation | Docker + docker-compose | Isolation de l'environnement, déploiement facilité |
+| Versionnement | Git | Commits atomiques, README, .gitignore |
 
 ---
 
 ## Prérequis
 
-- Python 3.10+
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (pour PostgreSQL) ou PostgreSQL installé localement
-- [Git](https://git-scm.com/)
+- Python 3.12 ou supérieur
+- Docker et Docker Compose
+- Git
 
 ---
 
 ## Installation
 
 ### 1. Cloner le dépôt
-
 ```bash
-git clone https://github.com/votre-utilisateur/enron-discovery.git
+git clone https://github.com/Daniele-Nana/enron-discovery.git
 cd enron-discovery
 ```
 
-### 2. Créer et activer un environnement virtuel *(optionnel mais recommandé)*
-
+### 2. Créer et activer un environnement virtuel
 ```bash
 python -m venv venv
-
-# Sous Windows
-venv\Scripts\activate
-
-# Sous Linux/Mac
-source venv/bin/activate
+source venv/bin/activate        # Linux / macOS
+# venv\Scripts\activate         # Windows
 ```
 
 ### 3. Installer les dépendances Python
-
 ```bash
 pip install -r requirements.txt
 ```
 
-> Si vous n'avez pas encore de fichier `requirements.txt`, générez-le après installation avec `pip freeze > requirements.txt`.
-
-### 4. Lancer PostgreSQL avec Docker
-
+### 4. Démarrer PostgreSQL avec Docker
 ```bash
 docker-compose up -d
 ```
 
-Le fichier `docker-compose.yml` fourni crée une base de données nommée `enron` avec l'utilisateur `enron` et le mot de passe `enron`, accessible sur le port `5432`.
+> Le conteneur crée une base `enron` avec l'utilisateur `enron` (mot de passe `enron`), accessible sur le port `5432`. Les données sont persistées dans un volume Docker.
 
 ### 5. Appliquer les migrations Django
-
 ```bash
 python manage.py migrate
 ```
 
-### 6. Importer les données
+### 6. Importer le corpus Enron
 
-Placez le dossier `maildir` (contenant les emails Enron) à la racine du projet, ou modifiez le chemin dans le script `import.py`.
-
-Exécutez le script d'import *(un échantillon est conseillé pour commencer)* :
-
+Placez le dossier `maildir/` (contenant les emails) à la racine du projet, puis exécutez :
 ```bash
 python import.py
 ```
 
-> ⚠️ L'import complet des 500 000 emails peut prendre plusieurs heures. Pour un test rapide, vous pouvez limiter l'import à un sous-dossier (par exemple `allen-p/inbox`) en modifiant la variable `base` dans le script.
+> ⚠️ L'import complet des 500 000 emails peut prendre plusieurs heures. Pour un test rapide, limitez l'import à un sous-dossier (ex. `allen-p/inbox`) en modifiant la variable `base` dans le script.
 
 ### 7. Lancer le serveur de développement
-
 ```bash
 python manage.py runserver
 ```
 
-Accédez à l'application sur [http://127.0.0.1:8000](http://127.0.0.1:8000)
+L'application est accessible à l'adresse **http://127.0.0.1:8000/**.
+
+---
+
+## Fonctionnalités
+
+| URL | Description |
+|---|---|
+| `/` | Tableau de bord — statistiques globales, top acteurs, évolution mensuelle |
+| `/search/` | Recherche avancée plein texte avec filtres et surbrillance |
+| `/thread/<id>/` | Fil de discussion — message et réponses directes |
+| `/thread_complet/<id>/` | Fil complet depuis la racine (CTE récursive) |
+| `/influence/<id>/` | Page d'influence d'un collaborateur |
+| `/collaborateur/<id>/tous-emails/` | Tous les emails envoyés/reçus (paginés) |
+| `/collaborateur/<id>/dossiers/` | Arborescence des dossiers |
+| `/graphe/` | Graphe d'influence interactif |
 
 ---
 
 ## Structure du projet
-
 ```
-enron_project/
+enron-discovery/
 ├── discovery/                # Application principale
 │   ├── management/           # Commandes personnalisées (update_search_vector)
-│   ├── migrations/           # Migrations Django
-│   ├── templates/            # Templates HTML
-│   │   └── discovery/        # Tous les templates de l'application
-│   ├── models.py             # Modèles de données
-│   ├── views.py              # Vues
-│   └── urls.py               # URLs de l'application
+│   ├── migrations/           # Migrations Django (versionnées)
+│   ├── templates/            # Templates HTML (Bootstrap 5)
+│   ├── models.py             # Modèles SQL
+│   ├── views.py              # Vues Django
+│   └── urls.py
 ├── enron_project/            # Configuration du projet Django
 │   ├── settings.py
-│   ├── urls.py
-│   └── ...
-├── data/                     # Dossier pour les données brutes (ignoré par Git)
+│   └── urls.py
+├── maildir/                  # (à placer) données Enron — non versionné
 ├── import.py                 # Script d'import des emails
-├── manage.py
-├── docker-compose.yml        # Configuration Docker pour PostgreSQL
+├── docker-compose.yml        # PostgreSQL 15 isolé
 ├── requirements.txt          # Dépendances Python
+├── manage.py
 └── README.md
 ```
 
 ---
 
-## Choix de modélisation
+## Modélisation SQL (MLD)
+```
+Collaborateur(id PK, email UNIQUE, nom)
+     |1
+     |N
+  Message(id PK, message_id UNIQUE, date, objet, corps,
+          expediteur_id FK→Collaborateur, in_reply_to, search_vector)
+     |N                        |N
+     |                          M
+  MessageFolder           Destinataire(message_id FK, collaborateur_id FK)
+     |M
+  Folder(id PK, path UNIQUE, parent_id FK→Folder  [récursif])
+```
 
 ### Tables principales
 
-#### `Collaborateur` (`discovery_collaborateur`)
+**`Collaborateur`** — Stocke les adresses email (champ `email` unique) et éventuellement le nom. Table dédiée pour éviter toute duplication : un même acteur peut être expéditeur ou destinataire dans plusieurs messages.
 
-Stocke les adresses email (champ `email` unique) et éventuellement le nom. Permet d'identifier de manière unique chaque personne impliquée dans les échanges.
+**`Message`** — Cœur du système. Contient `message_id` (unique), `date`, `objet`, `corps`, une clé étrangère `expediteur_id` vers `Collaborateur`, le champ `in_reply_to` pour reconstruire les fils, et `search_vector` pour la recherche plein texte.
 
-#### `Message` (`discovery_message`)
+**`Destinataire`** — Table d'association ManyToMany entre `Message` et `Collaborateur`. Représente fidèlement les champs To, Cc et Bcc sans dupliquer les messages.
 
-Contient les métadonnées : `message_id` (identifiant unique de l'email), `date`, `objet`, `corps`. Une clé étrangère vers `Collaborateur` (`expediteur`) lie chaque message à son auteur. Le champ `in_reply_to` (optionnel) référence le `message_id` du message parent, permettant de reconstruire les fils de discussion. Un champ `search_vector` (`SearchVectorField`) est utilisé pour la recherche plein texte optimisée.
+**`Folder` et `MessageFolder`** — Conservent l'arborescence des dossiers originaux (inbox, sent…). La clé étrangère récursive `parent_id` permet de reconstituer la hiérarchie.
 
-#### `Destinataire` (`discovery_message_destinataires`)
+### Index
 
-Table d'association many-to-many entre `Message` et `Collaborateur`. Permet de gérer les multiples destinataires (To, Cc, Bcc) sans duplication des messages. Une table séparée évite la redondance et normalise le schéma.
-
-#### `Dossier` (`discovery_folder`) et `MessageFolder` (`discovery_messagefolder`)
-
-Représentent l'arborescence des dossiers telle qu'elle existait dans les boîtes aux lettres originales. Utiles pour conserver le contexte organisationnel, mais non essentiels pour la recherche.
-
-> 📎 *Pièce jointe (optionnelle) — non implémentée dans cette version.*
-
-### Optimisations et contraintes
-
-**Index :**
-- Index sur `date` pour accélérer les recherches par période.
-- Index sur `message_id` et `in_reply_to` pour faciliter la construction des threads.
-- Index GIN sur `search_vector` pour la recherche plein texte.
-
-**Normalisation :**
-- La séparation des entités évite la duplication des adresses email et des messages.
-- Les clés étrangères avec `on_delete=models.CASCADE` garantissent l'intégrité référentielle.
-
-**Contraintes d'unicité :**
-- `Collaborateur.email` est unique.
-- `Message.message_id` est unique (certains emails peuvent être dupliqués dans l'arborescence, on les ignore lors de l'import).
+| Index | Type | Colonne(s) | Utilité |
+|---|---|---|---|
+| `idx_search_gin` | GIN | `search_vector` | Recherche plein texte |
+| `idx_date` | B-tree | `date` | Filtres et tris temporels |
+| `idx_expediteur` | B-tree | `expediteur_id` | Jointures par expéditeur |
+| `idx_in_reply_to` | B-tree | `in_reply_to` | Reconstruction des fils |
+| `idx_dest` | B-tree | `collaborateur_id` (M2M) | Requêtes sur destinataires |
 
 ### Justification des choix
 
-Le schéma permet de répondre aux exigences du cahier des charges :
-
 | Fonctionnalité | Mécanisme utilisé |
 |---|---|
-| Dashboard | Agrégations rapides (`COUNT`, `GROUP BY`) grâce aux index |
-| Recherche | Recherche plein texte performante avec les index GIN |
-| Explorateur de threads | Jointure sur `in_reply_to` pour remonter les réponses |
-| Graphe d'influence | Tables many-to-many pour le comptage des interactions |
+| Dashboard | Agrégations (`COUNT`, `TruncMonth`) accélérées par les index |
+| Recherche | Full-Text Search avec index GIN et `SearchQuery` (websearch) |
+| Explorateur de threads | Jointure sur `in_reply_to` + CTE récursive `WITH RECURSIVE` |
+| Graphe d'influence | Comptage des interactions via la table ManyToMany |
 
-> Ce modèle a été testé sur un échantillon de 3 000 emails et montre de bonnes performances. Pour l'ensemble du corpus, des optimisations supplémentaires (partitionnement, réglage des index) pourront être envisagées.
+### Contraintes d'intégrité
+
+- `Collaborateur.email` est unique
+- `Message.message_id` est unique (les doublons sont ignorés à l'import)
+- Clés étrangères avec `on_delete=CASCADE` pour garantir l'intégrité référentielle
+- Contrainte d'unicité sur le couple `(message, folder)` dans `MessageFolder`
 
 ---
 
-## Choix techniques
+## Notes techniques
 
-| Composant | Technologie | Justification |
-|---|---|---|
-| Backend | Django 6.0 | Rapidité de développement, ORM puissant |
-| Base de données | PostgreSQL | Index GIN pour la recherche plein texte |
-| Recherche plein texte | `SearchVectorField` + `SearchQuery` | Requêtes performantes sur le contenu des messages |
-| Conteneurisation | Docker | Isolation de l'environnement PostgreSQL, déploiement facilité |
-| Frontend | Bootstrap 5 + Chart.js | Rendu responsive et graphiques interactifs |
+- **Recherche plein texte** : opérateur `websearch` de PostgreSQL (guillemets pour phrase exacte, `-` pour exclure, `OR` pour l'union). Le `search_vector` est alimenté par un trigger PostgreSQL pondérant l'objet (poids `A`) et le corps (poids `B`). Les résultats sont classés par `SearchRank`.
+- **Fils de discussion** : deux vues — récursion Python pour les réponses directes, requête `WITH RECURSIVE` (CTE) pour reconstituer tout l'arbre en une seule requête SQL.
+- **Cache** : données du dashboard et du graphe d'influence mises en cache en mémoire pendant 1 heure.
+- **Import** : insertions via `bulk_create` par lots dans des transactions `atomic()` pour garantir l'intégrité en cas d'erreur.
+
+> ⚠️ La base de données n'est pas incluse dans le dépôt Git (voir `.gitignore`).
 
 ---
 
 ## Améliorations possibles
 
-- [ ] Ajout d'une authentification pour restreindre l'accès.
-- [ ] Mise en place d'un système de cache pour les requêtes fréquentes.
-- [ ] Optimisation de l'import avec des traitements parallèles.
-- [ ] Utilisation de WebSockets pour des mises à jour en temps réel.
+- [ ] Authentification pour restreindre l'accès
+- [ ] Traitements parallèles pour accélérer l'import
+- [ ] Gestion complète des pièces jointes
+- [ ] Déploiement en ligne (Render, Railway)
+
+---
+
+## Licence
+
+Projet réalisé dans le cadre d'un travail universitaire — Université d'Angers, 2026.  
+Toute reproduction est soumise à l'autorisation des auteurs.
+
+---
+
+*Source des données : [Enron Email Dataset (CMU)](https://www.cs.cmu.edu/~enron/)*
